@@ -17,6 +17,7 @@ marbletoolbar .children-box {
 marblebutton {
   font-size: 12px;
   color: #F3F3F3;
+  min-width: 5em;
   margin: 0px 1px 0px 1px;
 
   border: 1px solid transparent;
