@@ -54,7 +54,14 @@ var gAAManager = {
         let fontFamily = ChaikaCore.pref.getUniChar("thread_aa_font_name");
         let fontSize = ChaikaCore.pref.getInt("thread_aa_font_size");
         let lineHeight = ChaikaCore.pref.getInt("thread_aa_line_space") + fontSize;
-        let fontStyle = [fontSize, "px/", lineHeight, "px '", fontFamily, "'"].join("");
+        let fontStyle = ""
+            + fontSize
+            + "px/"
+            + lineHeight
+            + "px '"
+            + fontFamily
+            + "'"
+        ;
 
         this._aaTextbox.style.font = fontStyle;
     },

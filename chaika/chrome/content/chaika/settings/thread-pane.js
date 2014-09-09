@@ -39,14 +39,16 @@
 const FONT_PREVIEW = [
         "出されたご飯は残さず食べる。",
         "転んでも泣かない。",
-        "おいらのギャグには大爆笑する。"].join("\n");
+        "おいらのギャグには大爆笑する。",
+        ].join("\n");
 const AA_FONT_PREVIEW = [
         "　 ┌───────────────┐ ",
         "　 │ .右のAAのｽﾞﾚない環境が標準モナ.｜",
         "　 └──y────────────‐┘ ",
         " ∧＿∧　　　　　　| 　 　 |＼|／　|　　　　　｜ 　　｜",
         "（　´∀｀）　　　　　 | ∧ ∧  |/⌒ヽ、| ∧＿∧ | ∧∧ |",
-        "（　　 　 つ 　 　 　 |(,,ﾟДﾟ)||,,ﾟ Θﾟ）|（； ´Д｀）|(=ﾟωﾟ)|"].join("\n");
+        "（　　 　 つ 　 　 　 |(,,ﾟДﾟ)||,,ﾟ Θﾟ）|（； ´Д｀）|(=ﾟωﾟ)|",
+        ].join("\n");
 
 
 var gThreadPane = {
@@ -125,7 +127,12 @@ var gThreadPane = {
         var fontPreview = document.getElementById("fontPreview");
         var fontSize = parseInt(document.getElementById("fontSize").value);
         var fontFamily = document.getElementById("lstThreadFontList").value;
-        fontPreview.style.font = [fontSize, "px '", fontFamily, "'"].join("");
+        fontPreview.style.font = ""
+            + fontSize
+            + "px '"
+            + fontFamily
+            + "'"
+        ;
     },
 
 
@@ -135,7 +142,14 @@ var gThreadPane = {
         var fontSize = parseInt(document.getElementById("aaFontSize").value);
         var lineHeight = (parseInt(document.getElementById("aaLineHeight").value) + fontSize);
         var fontFamily = document.getElementById("lstThreadAAFontList").value;
-        fontPreview.style.font = [fontSize, "px/", lineHeight, "px '", fontFamily, "'"].join("");
+        fontPreview.style.font = ""
+            + fontSize
+            + "px/"
+            + lineHeight
+            + "px '"
+            + fontFamily
+            + "'"
+        ;
     },
 
 

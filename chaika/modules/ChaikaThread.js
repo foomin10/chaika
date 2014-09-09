@@ -194,8 +194,15 @@ ChaikaThread.prototype = {
         if(this.type != ChaikaBoard.BOARD_TYPE_2CH){
             this.datKakoURL = this.datURL.clone().QueryInterface(Ci.nsIURL);
         }else{
-            datURLSpec = this.boardURL.resolve(["kako/", this.datID.substring(0,4), "/",
-                                this.datID.substring(0,5), "/", this.datID, ".dat"].join(""));
+            datURLSpec = this.boardURL.resolve(""
+                + "kako/"
+                + this.datID.substring(0,4)
+                + "/"
+                + this.datID.substring(0,5)
+                + "/"
+                + this.datID
+                + ".dat"
+            );
             this.datKakoURL = ioService.newURI(datURLSpec, null, null)
                     .QueryInterface(Components.interfaces.nsIURL);
         }

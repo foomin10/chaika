@@ -755,7 +755,7 @@ var Tree = {
         if (aCol.index == 0){
             var type = "type-" + this._visibleNodes[aRow].getAttribute("type");
 
-            return ['title', type].join(' ');
+            return 'title ' + type;
         }
     },
     getColumnProperties: function(aCol){},

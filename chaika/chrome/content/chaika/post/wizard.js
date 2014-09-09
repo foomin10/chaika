@@ -678,7 +678,14 @@ var FormPage = {
             var fontFamily = ChaikaCore.pref.getUniChar("thread_aa_font_name");
             var fontSize = ChaikaCore.pref.getInt("thread_aa_font_size");
             var lineHeight = ChaikaCore.pref.getInt("thread_aa_line_space") + fontSize;
-            fontStyle = [fontSize, "px/", lineHeight, "px '", fontFamily, "'"].join("");
+            fontStyle = ""
+                + fontSize
+                + "px/"
+                + lineHeight
+                + "px '"
+                + fontFamily
+                + "'"
+            ;
         }
         this._messeageForm.style.font = fontStyle;
     },
@@ -874,7 +881,14 @@ var PreviewPage = {
             var fontFamily = ChaikaCore.pref.getUniChar("thread_aa_font_name");
             var fontSize = ChaikaCore.pref.getInt("thread_aa_font_size");
             var lineHeight = ChaikaCore.pref.getInt("thread_aa_line_space") + fontSize;
-            fontStyle = [fontSize, "px/", lineHeight, "px '", fontFamily, "'"].join("");
+            fontStyle = ""
+                + fontSize
+                + "px/"
+                + lineHeight
+                + "px '"
+                + fontFamily
+                + "'"
+            ;
         }
         previewDoc.body.style.font = fontStyle;
 
