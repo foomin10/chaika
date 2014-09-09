@@ -96,6 +96,10 @@ pref("extensions.chaika.thread_hide_abone", false);
 pref("extensions.chaika.thread_chain_abone", false);
 pref("extensions.chaika.thread_show_be_icon", false);
 pref("extensions.chaika.thread_get_log_from_mimizun", false);
+pref("extensions.chaika.thread_get_log_from_offlaw2", false);
+pref("extensions.chaika.thread_get_log_from_unkar", false);
+pref("extensions.chaika.thread_get_log_from_bg20", false);
+pref("extensions.chaika.thread_get_log_from_viprpg", false);
 pref("extensions.chaika.thread_alert_got_log", true);
 pref("extensions.chaika.thread_fix_invalid_anchor", false);
 
