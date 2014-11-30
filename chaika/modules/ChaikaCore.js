@@ -16,6 +16,7 @@ const Cr = Components.results;
 
 const DATA_DIR_NAME = "chaika";
 const LOGS_DIR_NAME = "chaika-logs";
+const KAKIKOMI_TXT_DIR_NAME = "kakikomi";
 const EXTENSION_ID = "chaika@chaika.xrea.jp";
 
 const PR_PERMS_DIR = 0755;
@@ -312,6 +313,21 @@ var ChaikaCore = {
             logDir.create(Ci.nsIFile.DIRECTORY_TYPE, PR_PERMS_DIR);
         }
         return logDir;
+    },
+
+
+    /**
+     * kakikomi.txt を保存するディレクトリを返す。
+     * ディレクトリが存在しない場合はこのメソッドが呼ばれた時に作成される。
+     * @return {nsIFile}
+     */
+    getKakikomiTxtDir: function ChaikaCore_getLogDir(){
+        var kakikomiTxtDir = this.getDataDir();
+        kakikomiTxtDir.appendRelativePath(KAKIKOMI_TXT_DIR_NAME);
+        if(!kakikomiTxtDir.exists()){
+            kakikomiTxtDir.create(Ci.nsIFile.DIRECTORY_TYPE, PR_PERMS_DIR);
+        }
+        return kakikomiTxtDir;
     },
 
 

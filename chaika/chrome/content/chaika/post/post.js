@@ -209,7 +209,7 @@ Post.prototype = {
 
         kakikomi = kakikomi.join("\r\n") + "\r\n\r\n\r\n";
 
-        var kakikomiFile = ChaikaCore.getDataDir();
+        var kakikomiFile = ChaikaCore.getKakikomiTxtDir();
         kakikomiFile.appendRelativePath("kakikomi.txt");
 
 
