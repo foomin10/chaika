@@ -77,7 +77,8 @@
                 <menuseparator />
                 <menuitem id="insertQPaste"
                           label="引用符付き貼り付け"
-                          oncommand="quotation_paste()" />
+                          oncommand="FormPage.quotationPaste();" />
+                <menuseparator />
                 <menuitem id="insertAAMenu"
                           label="AA・定型文の挿入"
                           oncommand="AAPanel.openPopup(this.parentNode.parentNode)" />
