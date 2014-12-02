@@ -684,7 +684,7 @@ var FormPage = {
 
     quotationPaste: function(){
         let quote = ChaikaClipboard.getString();
-        quote = '>' + quote.replace('\n', '\n>', 'g');
+        quote = '> ' + quote.replace('\n', '\n> ', 'g');
 
         let messeageForm = this._messeageForm;
         let leftValue = messeageForm.value.slice(0, messeageForm.selectionStart);
