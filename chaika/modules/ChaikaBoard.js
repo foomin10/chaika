@@ -1,43 +1,9 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
- *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- *
- * The Original Code is chaika.
- *
- * The Initial Developer of the Original Code is
- * chaika.xrea.jp
- * Portions created by the Initial Developer are Copyright (C) 2008
- * the Initial Developer. All Rights Reserved.
- *
- * Contributor(s):
- *    flyson <flyson.moz at gmail.com>
- *
- * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
- * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- *
- * ***** END LICENSE BLOCK ***** */
+/* See license.txt for terms of usage */
 
 
 EXPORTED_SYMBOLS = ["ChaikaBoard"];
 Components.utils.import("resource://chaika-modules/ChaikaCore.js");
+Components.utils.import("resource://chaika-modules/ChaikaContentReplacer.js");
 
 
 const Ci = Components.interfaces;
@@ -605,24 +571,26 @@ ChaikaBoard.prototype = {
      */
     boardSubjectUpdate: function ChaikaBoard_boardSubjectUpdate(){
         if(!this.subjectFile.exists()){
-            ChaikaCore.logger.warning("FILE NOT FOUND: " + this.subjectFile.path);
+            ChaikaCore.logger.error("FILE NOT FOUND: " + this.subjectFile.path);
             return;
         }
 
-            // 行の解析に使う正規表現
-        var regLine;
+        // 行の解析に使う正規表現
+        var lineReg;
+
         switch(this.type){
             case ChaikaBoard.BOARD_TYPE_2CH:
             case ChaikaBoard.BOARD_TYPE_BE2CH:
-                regLine = /^(\d{9,10})\.dat<>(.+) ?\((\d{1,4})\)/;
+                lineReg = /^(\d{9,10})\.dat<>(.+) ?\((\d{1,4})\)/;
                 break;
             case ChaikaBoard.BOARD_TYPE_JBBS:
             case ChaikaBoard.BOARD_TYPE_MACHI:
-                regLine = /^(\d{9,10})\.cgi,(.+) ?\((\d{1,4})\)/;
+                lineReg = /^(\d{9,10})\.cgi,(.+) ?\((\d{1,4})\)/;
                 break;
         }
 
         var charset;
+
         switch(this.type){
             case ChaikaBoard.BOARD_TYPE_2CH:
             case ChaikaBoard.BOARD_TYPE_MACHI:
@@ -635,34 +603,62 @@ ChaikaBoard.prototype = {
         }
 
         var fileStream = ChaikaCore.io.getFileInputStream(this.subjectFile, charset)
-                                .QueryInterface(Ci.nsIUnicharLineInputStream);
-
+                                      .QueryInterface(Ci.nsIUnicharLineInputStream);
         var database = ChaikaCore.storage;
         var statement = database.createStatement(
                 "REPLACE INTO board_subject(thread_id, board_id, dat_id, title, title_n, line_count, ordinal) " +
                 "VALUES(?1,?2,?3,?4,?5,?6,?7);");
-
         var boardID = this.id;
-        database.beginTransaction();
-        try{
-            database.executeSimpleSQL("DELETE FROM board_subject WHERE board_id='" + boardID + "';");
-            var line = {};
-            var ordinal = 1;
-            var cont;
-            do{
-                cont = fileStream.readLine(line);
 
-                    // JBBS の subject は、最終行に1行目と同じ情報が入っているので無視する
-                if(!cont && this.type==ChaikaBoard.BOARD_TYPE_JBBS){
+        database.beginTransaction();
+
+        try{
+
+            database.executeSimpleSQL("DELETE FROM board_subject WHERE board_id='" + boardID + "';");
+
+            let line = {};
+            let ordinal = 1;
+            let hasMoreLine;
+
+            do{
+                hasMoreLine = fileStream.readLine(line);
+
+                // JBBS の subject は、最終行に1行目と同じ情報が入っているので無視する
+                if(this.type === ChaikaBoard.BOARD_TYPE_JBBS && !hasMoreLine){
                     break;
                 }
 
-                if(!regLine.test(line.value)) continue;
-                var datID = RegExp.$1;
-                var threadID = boardID + datID;
-                var count = Number(RegExp.$3);
-                var title = ChaikaCore.io.unescapeHTML(RegExp.$2);
-                // ChaikaCore.logger.debug([threadID, boardID, datID, count, ordinal]);
+                if(!lineReg.test(line.value)) continue;
+
+                let datID = RegExp.$1;
+                let threadID = boardID + datID;
+                let count = Number(RegExp.$3);
+                let title = RegExp.$2;
+
+
+                title = ChaikaCore.io.unescapeHTML(title);
+
+
+                // JBBS では , が ＠｀ に置換されている
+                if(this.type === ChaikaBoard.BOARD_TYPE_JBBS){
+                    //\uff20\uff40 = ＠｀
+                    title = title.replace(/\uff20\uff40/g, ',');
+                }
+
+
+                // ユーザー定義の置換
+                let replacedThreadData = ChaikaContentReplacer.replace({
+                    title: title,
+                    board_url: this.url.spec,
+                    isThreadList: false,
+                    isSubjectTxt: true
+                });
+
+                if(replacedThreadData){
+                    title = replacedThreadData.title;
+                }
+
+
                 statement.bindStringParameter(0, threadID);
                 statement.bindStringParameter(1, boardID);
                 statement.bindStringParameter(2, datID);
@@ -671,8 +667,10 @@ ChaikaBoard.prototype = {
                 statement.bindInt32Parameter(5, count);
                 statement.bindInt32Parameter(6, ordinal);
                 statement.execute();
+
                 ordinal++;
-            }while (cont);
+            }while(hasMoreLine);
+
         }catch(ex){
             ChaikaCore.logger.error(ex);
             throw makeException(ex.result);
@@ -682,6 +680,7 @@ ChaikaBoard.prototype = {
             database.commitTransaction();
             fileStream.close();
         }
+
         this._setBoardData();
     },
 

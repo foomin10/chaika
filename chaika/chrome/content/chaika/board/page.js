@@ -20,6 +20,7 @@
  *
  * Contributor(s):
  *    flyson <flyson at users.sourceforge.jp>
+ *    nodaguti <nodaguti at gmail.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -40,6 +41,7 @@ Components.utils.import("resource://chaika-modules/ChaikaCore.js");
 Components.utils.import("resource://chaika-modules/ChaikaBoard.js");
 Components.utils.import("resource://chaika-modules/ChaikaDownloader.js");
 Components.utils.import("resource://chaika-modules/ChaikaAboneManager.js");
+Components.utils.import("resource://chaika-modules/ChaikaContentReplacer.js");
 
 const Ci = Components.interfaces;
 const Cc = Components.classes;
@@ -262,7 +264,7 @@ var BoardTree = {
         }
 
 
-        //スレッドあぼーん処理
+        //スレッドあぼーん処理 および スレタイ置換
         var enableHideAbone = ChaikaCore.pref.getBool('thread_hide_abone');
         var threads = gBoard.itemsDoc.documentElement.getElementsByTagName('boarditem');
 
@@ -272,11 +274,13 @@ var BoardTree = {
             //透明あぼーんの影響で最後の方は参照できなくなる
             if(!thread) continue;
 
+
+            //スレッドあぼーん処理
             let hitAboneData = ChaikaAboneManager.shouldAbone({
                 title: thread.getAttribute('title'),
                 date: thread.getAttribute('created'),
                 thread_url: thread.getAttribute('url'),
-                board_url: gBoard.url,
+                board_url: gBoard.url.spec,
                 isThread: true
             });
 
@@ -294,6 +298,21 @@ var BoardTree = {
                 }else{
                     thread.setAttribute('title', '***** ABONE ***** (' + hitAboneData.title + ')');
                 }
+            }
+
+
+            //スレタイ置換処理
+            let replacedThreadData = ChaikaContentReplacer.replace({
+                title: thread.getAttribute('title'),
+                date: thread.getAttribute('created'),
+                thread_url: thread.getAttribute('url'),
+                board_url: gBoard.url.spec,
+                isThreadList: true,
+                isSubjectTxt: false
+            });
+
+            if(replacedThreadData){
+                thread.setAttribute('title', replacedThreadData.title);
             }
         }
 
@@ -353,21 +372,46 @@ var BoardTree = {
     },
 
     keyDown: function BoardTree_keyDown(aEvent){
-        if(this.tree.currentIndex == -1) return;
+        switch(aEvent.key){
+            case 'Enter':
+                this.openThread(aEvent.ctrlKey || aEvent.altKey);
+                break;
 
-        if(aEvent.keyCode == aEvent.DOM_VK_ENTER || aEvent.keyCode == aEvent.DOM_VK_RETURN){
-            if(aEvent.ctrlKey || aEvent.altKey){
-                this.openThread(true);
-            }else{
-                this.openThread(false);
-            }
+            case 'Spacebar':  // For Firefox 28-
+            case ' ':
+                if(aEvent.shiftKey){
+                    this.tree._moveByPage(-1, 0, aEvent);
+                }else{
+                    this.tree._moveByPage(1, this.tree.view.rowCount - 1, aEvent);
+                }
+                break;
 
-        }else if(aEvent.charCode == aEvent.DOM_VK_SPACE){
-            if(aEvent.shiftKey){
-                this.tree._moveByPage(-1, 0, aEvent);
-            }else{
-                this.tree._moveByPage(1, this.tree.view.rowCount - 1, aEvent);
-            }
+            case 'r':
+                subjectUpdate();
+                break;
+
+            case 'f':
+                document.getElementById('searchTextBox').focus();
+                break;
+
+            case 'j':
+                let nextIndex = this.tree.currentIndex + 1;
+
+                if(nextIndex > this.tree.view.rowCount - 1) nextIndex = this.tree.view.rowCount - 1;
+
+                this.tree.treeBoxObject.view.selection.select(nextIndex);
+                this.tree.treeBoxObject.ensureRowIsVisible(nextIndex);
+                break;
+
+            case 'k':
+                let prevIndex = this.tree.currentIndex - 1;
+
+                if(prevIndex < 0) prevIndex = 0;
+
+                this.tree.treeBoxObject.view.selection.select(prevIndex);
+                this.tree.treeBoxObject.ensureRowIsVisible(prevIndex);
+                break;
+
         }
     },
 
@@ -477,20 +521,18 @@ var BoardTree = {
 };
 
 function setStatus(aString){
-    document.getElementById("statusDeck").selectedIndex = (aString) ? 1 : 0; 
+    document.getElementById("statusDeck").selectedIndex = (aString) ? 1 : 0;
     document.getElementById("lblStatus").value = aString;
 }
 
 /**
  * subject.txt をダウンロードする
  */
-function subjectUpdate(aEvent, aForce){
-    if(aEvent && aEvent.type=="click" && aEvent.button!=0) return;
-
+function subjectUpdate(aForceUpdate){
         // ダウンロード間隔の制限
     var subjectFile = gBoard.subjectFile.clone();
     var settingFile = gBoard.settingFile.clone();
-    if(subjectFile.exists() && !aForce){
+    if(subjectFile.exists() && !aForceUpdate){
         var interval = new Date().getTime() - subjectFile.lastModifiedTime;
         var updateIntervalLimit =  ChaikaCore.pref.getInt("board.update_interval_limit");
             // 不正な値や、10 秒以下なら 10 秒にする
@@ -512,44 +554,35 @@ function subjectUpdate(aEvent, aForce){
     gSubjectDownloader.onStart = function(aDownloader){
         setStatus("start: " + this.url.spec);
     };
+
     gSubjectDownloader.onStop = function(aDownloader, aStatus){
         setStatus("");
 
         var subjectFile = gBoard.subjectFile.clone();
         var settingFile = gBoard.settingFile.clone();
 
-        if(aStatus == 302 || !subjectFile.exists() || subjectFile.fileSize==0){
-            setStatus("スレッド一覧を取得できませんでした。板が移転した可能性があります。");
-            document.getElementById("dckUpdate").selectedIndex = 1;
-            return;
+        if(aStatus === 302 || !subjectFile.exists() || subjectFile.fileSize === 0){
+            setStatus("スレッド一覧を取得できませんでした。板の移転を確認しています...");
+            return checkBoardRelocation();
         }
 
         gBoard.boardSubjectUpdate();
 
-        if(!settingFile.exists() || settingFile.fileSize==0){
+        if(!settingFile.exists() || settingFile.fileSize === 0){
             settingUpdate();
         }else{
             BoardTree.initTree();
         }
     };
+
     gSubjectDownloader.onProgressChange = function(aDownloader, aPercentage){
         setStatus("downloading: " + aPercentage + "%");
     };
+
     gSubjectDownloader.onError = function(aDownloader, aErrorCode){
-        var errorText = "";
-        switch(aErrorCode){
-            case ChaikaDownloader.ERROR_BAD_URL:
-                errorText = "BAD URL";
-                break;
-            case ChaikaDownloader.ERROR_NOT_AVAILABLE:
-                errorText = "NOT AVAILABLE";
-                break;
-            case ChaikaDownloader.ERROR_FAILURE:
-                errorText = "ERROR FAILURE";
-                break;
-        }
         setStatus("ネットワークの問題により、スレッド一覧を取得できませんでした。");
     };
+
 
     gSubjectDownloader.download();
     setStatus("request: " + gSubjectDownloader.url.spec);
@@ -589,31 +622,15 @@ function showBrowser(aTab){
 }
 
 function openLogsDir(){
-    var logDir = gBoard.subjectFile.parent;
-    ChaikaCore.io.revealDir(logDir);
+    ChaikaCore.io.reveal(gBoard.subjectFile.parent);
 }
 
 function postNewThread(){
-    var postWizardURLSpec = "chrome://chaika/content/post/wizard.xul";
-
-    var browserWindow = ChaikaCore.browser.getBrowserWindow();
-    browserWindow.openDialog(postWizardURLSpec, "_blank",
-        "chrome, resizable, dialog", gBoard.url.spec, true);
+    ChaikaCore.browser.openWindow("chrome://chaika/content/post/wizard.xul", null, gBoard.url.spec, true);
 }
 
 function openSettings(){
-    var settingDialogURL = "chrome://chaika/content/settings/settings.xul#paneBoard";
-
-    var features = "";
-    try{
-        var pref = Cc["@mozilla.org/preferences-service;1"].getService(Ci.nsIPrefBranch);
-        var instantApply = pref.getBoolPref("browser.preferences.instantApply");
-        features = "chrome,titlebar,toolbar,centerscreen" + (instantApply ? ",dialog=no" : ",modal");
-    }catch(ex){
-        features = "chrome,titlebar,toolbar,centerscreen,modal";
-    }
-    var browserWindow = ChaikaCore.browser.getBrowserWindow();
-    browserWindow.openDialog(settingDialogURL, "", features);
+    ChaikaCore.browser.openWindow("chrome://chaika/content/settings/settings.xul#paneBoard", "chaika:settings");
 }
 
 function showBanner(aEvent){
@@ -638,104 +655,93 @@ function bannerLoadError(aEvent){
     alert("バナーの読み込みに失敗しました");
 }
 
-function boardMoveCheck(aEvent){
-    if(aEvent.type=="click" && aEvent.button!=0) return;
+function checkBoardRelocation(){
+    gBoardMoveChecker = new NewBoardURLFinder();
 
-    gBoardMoveChecker = new b2rBoardMoveChecker();
-    gBoardMoveChecker.onChecked = function(aSuccess, aNewURL){
-        if(aSuccess){
-            setStatus(aNewURL +" への移転を確認しました");
-            gNewURL = aNewURL;
-            document.getElementById("dckUpdate").selectedIndex = 2;
-        }else{
-            setStatus("移転先を確認できませんでした");
-            gNewURL = null;
-            document.getElementById("dckUpdate").selectedIndex = 0;
+    gBoardMoveChecker.onSuccess = function(aNewURL){
+        var shouldMove = confirm(aNewURL + ' への移転を確認しました。新しい URL へ移動しますか？');
+
+        if(shouldMove){
+            moveToNewURL(aNewURL);
         }
-        gBoardMoveChecker = null;
-    }
+    };
+
+    gBoardMoveChecker.onFail = function(){
+        setStatus("移転先を確認できませんでした。板の URL を再度確認して下さい。");
+    };
+
     gBoardMoveChecker.check(gBoard.url.spec);
-    setStatus("板の移転を確認中...");
 }
 
-function moveNewURL(aEvent){
-    if(aEvent.type=="click" && aEvent.button!=0) return;
-
-    if(gNewURL){
+function moveToNewURL(newURL){
+    if(newURL){
         var oldLogDir = ChaikaBoard.getLogFileAtURL(gBoard.url);
+
         try{
             var subjectFile = gBoard.subjectFile.clone();
             var settingFile = gBoard.settingFile.clone();
-            if(subjectFile.exists() && subjectFile.fileSize==0){
+
+            if(subjectFile.exists() && subjectFile.fileSize === 0){
                 subjectFile.remove(true);
             }
-            if(settingFile.exists() && settingFile.fileSize==0){
+
+            if(settingFile.exists() && settingFile.fileSize === 0){
                 settingFile.remove(true);
             }
+
             oldLogDir.remove(false);
         }catch(ex){}
 
         setTimeout(function(){
-            window.location.href = "chaika://board/" + gNewURL;
+            window.location.href = "chaika://board/" + newURL;
         }, 0);
-    }else{
-        document.getElementById("dckUpdate").selectedIndex = 0;
     }
 }
 
-function b2rBoardMoveChecker(){
+
+function NewBoardURLFinder(){
 }
 
-b2rBoardMoveChecker.prototype = {
-    get cheking(){
-        this._checkiing;
-    },
+NewBoardURLFinder.prototype = {
 
     check: function(aBoardURLSpec){
-        this._checkiing = false;
-        if(this._httpReq && this._httpReq.readyState!=0){
+        if(this._httpReq && this._httpReq.readyState !== 0){
             this._httpReq.abort();
         }
+
         this._httpReq = new XMLHttpRequest();
-        var context = this;
-        this._httpReq.onreadystatechange = function(){
-            context._onreadystatechange();
-        }
+
+        this._httpReq.onreadystatechange = this._onreadystatechange.bind(this);
         this._httpReq.open("GET", aBoardURLSpec);
         this._httpReq.send(null);
-        this._checkiing = true;
     },
 
     abort: function(){
-        this._checkiing = false;
-        if(this._httpReq && this._httpReq.readyState!=0){
+        if(this._httpReq && this._httpReq.readyState !== 0){
             this._httpReq.abort();
             this._httpReq = null;
         }
     },
 
     _onreadystatechange: function(){
-        switch(this._httpReq.readyState){
-            case 4:
-                break;
-            default:
-                return;
-        }
+        if(this._httpReq.readyState !== 4) return;
 
         var responseText = this._httpReq.responseText;
-        if(responseText.match(/Change your bookmark/m)){
+
+        if(/Change your bookmark/m.test(responseText)){
             if(responseText.match(/<a href=\"([^\"]+)\">/m)){
-                this.onChecked(true, RegExp.$1);
+                this.onSuccess(RegExp.$1);
             }
         }else{
-            this.onChecked(false, null);
+            this.onFail();
         }
-        this._checkiing = false;
+
         this._httpReq = null;
     },
 
     onChecked: function(aSuccess, aNewURL){}
-}
+};
+
 
 var UpdateObserver = {
 
@@ -779,7 +785,7 @@ var UpdateObserver = {
         if(aTopic == "findNewThread:update"){
             var newThreadInfo = JSON.parse(aData);
             if(newThreadInfo.boardURL == gBoard.url.spec){
-                subjectUpdate(null, true);
+                subjectUpdate(true);
             }
             return;
         }

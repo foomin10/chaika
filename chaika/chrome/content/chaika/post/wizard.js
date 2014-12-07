@@ -1,39 +1,4 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
- *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- *
- * The Original Code is chaika.
- *
- * The Initial Developer of the Original Code is
- * chaika.xrea.jp
- * Portions created by the Initial Developer are Copyright (C) 2008
- * the Initial Developer. All Rights Reserved.
- *
- * Contributor(s):
- *    flyson <flyson.moz at gmail.com>
- *
- * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
- * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- *
- * ***** END LICENSE BLOCK ***** */
+/* See license.txt for terms of usage */
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 Components.utils.import("resource://gre/modules/FormHistory.jsm");
@@ -156,8 +121,8 @@ function shutdown(){
     // ただし、defaultmail.txtの内容は覚えない
     var sageCheck = document.getElementById("sageCheck");
 
-    if(sageCheck.hasAttribute('previousValue')){
-        sageCheck.setAttribute('checked', sageCheck.getAttribute('previousValue').toString());
+    if(sageCheck.hasAttribute('originalSageChecked')){
+        sageCheck.setAttribute('checked', sageCheck.getAttribute('originalSageChecked').toString());
     }else{
         sageCheck.setAttribute('checked', sageCheck.checked.toString());
     }
@@ -510,6 +475,8 @@ var FormPage = {
             ChaikaRoninLogin.enabled = false;
             FormPage._roninCheck.checked = false;
         }
+
+        ChaikaCore.logger.debug('ChaikaRoninLogin.enabled:', ChaikaRoninLogin.enabled);
     },
 
 
@@ -617,16 +584,14 @@ var FormPage = {
 
     /**
      * sageチェックボックスを管理する
-     * @param {Boolean} init 初期化する場合はtrue
+     * @param {Boolean} init 初期化する場合は true
      */
     sageCheck: function FormPage_sageCheck(init){
-        //defaultmail.txtで指定されている場合は、
-        //sageチェックボックスをそれに合わせる
-        if(init && this._mailForm.value){
-            //defaultmail.txtではない時の値を覚えておく
-            this._sageCheck.setAttribute('previousValue', this._sageCheck.checked.toString());
-
-            this._sageCheck.checked = this._mailForm.value.indexOf('sage') > -1;
+        //defaultmail.txt で指定されている場合は、
+        //チェックボックスをそれに合わせて defaultmail.txt ではない時の値を覚えておく
+        if(init && this._getDefaultData('defaultmail.txt') !== null){
+            this._sageCheck.setAttribute('originalSageChecked', this._sageCheck.checked.toString());
+            this._sageCheck.checked = this._mailForm.value.contains('sage');
         }
 
         //emptyTextの設定
@@ -701,10 +666,8 @@ var FormPage = {
         relatedAddons.then((addonList) => {
             template += "【ユーザーエージェント】" + userAgent + '\n';
             template += "【使用スキン】" + skinName + '\n';
-            template += "【関連アドオン】\n" +
-                        (addonList.length > 0 ? addonList.join('\n') :
-                                               '(なし)')
-                        + '\n\n';
+            template += "【関連アドオン】\n" + (addonList.join('\n') || '(なし)');
+            template += '\n\n';
 
             if(detailed){
                 let changedPrefs = this._getChangedPrefList();
@@ -782,46 +745,72 @@ var FormPage = {
                 return;
             }
 
-            if(prefName.startsWith('login.')) return;
+            // exclude accounts id & password
+            if(prefName.startsWith('maru_')) return;
+            if(prefName.endsWith('_id')) return;
+            if(prefName.endsWith('.id')) return;
+            if(prefName.endsWith('password')) return;
 
-            list.push(prefName + ': ' + getPrefValue(prefName));
+            let prefValue = getPrefValue(prefName);
+
+            if(prefName === 'data_dir' ||
+               prefName === 'http_proxy_value' ||
+               prefName.startsWith('login.')){
+                    prefValue = '(changed)';
+            }
+
+            list.push(prefName + ': ' + prefValue);
         });
 
         return list;
     },
 
 
-    _setDefaultMailName: function FormPage_setDefaultMailName(){
+    _getDefaultData: function(aFileName){
+        let defaultDataFile = ChaikaCore.getDataDir();
+        defaultDataFile.appendRelativePath(aFileName);
 
-        function getDefaultData(aFileName){
-            var defaultDataFile = ChaikaCore.getDataDir();
-            defaultDataFile.appendRelativePath(aFileName);
-
-            if(!defaultDataFile.exists()){
-                var defaultsFile = ChaikaCore.getDefaultsDir();
-                defaultsFile.appendRelativePath(defaultDataFile.leafName);
-                defaultsFile.copyTo(defaultDataFile.parent, null);
-                defaultDataFile = defaultDataFile.clone();
-            }
-
-            var urlSpec = gBoard.url.spec;
-            var lines = ChaikaCore.io.readString(defaultDataFile, "Shift_JIS")
-                            .replace(/\r/g, "\n").split(/\n+/);
-            for(var i=0; i<lines.length; i++){
-                var data = lines[i].split(/\t+/);
-                if(!(/^\s*(?:;|'|#|\/\/)/).test(data[0]) && urlSpec.indexOf(data[0]) != -1){
-                    return (data[1]);
-                }
-            }
-            return null;
+        if(!defaultDataFile.exists()){
+            let defaultsFile = ChaikaCore.getDefaultsDir();
+            defaultsFile.appendRelativePath(defaultDataFile.leafName);
+            defaultsFile.copyTo(defaultDataFile.parent, null);
+            defaultDataFile = defaultDataFile.clone();
         }
 
+        let boardURL = gBoard.url.spec;
+        let lines = ChaikaCore.io.readString(defaultDataFile, "Shift_JIS")
+                                 .split(/[\n\r]+/);
 
-        var defaultData = getDefaultData("defaultmail.txt");
-        if(defaultData) this._mailForm.value = defaultData;
+        for(let i=0; i<lines.length; i++){
+            // タブがない行は単なる空行
+            if(!lines[i].contains('\t')) continue;
 
-        defaultData = getDefaultData("defaultname.txt");
-        if(defaultData) this._nameForm.value = defaultData;
+            // コメント行
+            if(/^\s*(?:;|'|#|\/\/)/.test(lines[i])) continue;
+
+
+            let [boardID, defaultData, target] = lines[i].split(/\t+/);
+
+            if(target && ((target === 'thread' && gWizType !== WIZ_TYPE_NEW_THREAD) ||
+                          (target === 'post' && gWizType !== WIZ_TYPE_RES))){
+                continue;
+            }
+
+            if(boardURL.contains(boardID)){
+                return defaultData;
+            }
+        }
+
+        return null;
+    },
+
+
+    _setDefaultMailName: function FormPage_setDefaultMailName(){
+        let defaultMail = this._getDefaultData("defaultmail.txt");
+        if(defaultMail !== null) this._mailForm.value = defaultMail;
+
+        let defaultName = this._getDefaultData("defaultname.txt");
+        if(defaultName !== null) this._nameForm.value = defaultName;
     }
 };
 

@@ -1,3 +1,5 @@
+/* See license.txt for terms of usage */
+
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 Components.utils.import("resource://gre/modules/Services.jsm");
 Components.utils.import("resource://chaika-modules/ChaikaCore.js");
@@ -18,7 +20,7 @@ var Search2ch = {
 
     name: '2ch検索 (search.2ch.net)',
 
-    version: '1.0.0pre',
+    version: '1.0.0',
 
     updateURL: '%%ChaikaDefaultsDir%%/search/search2ch.search.js',
 
@@ -55,7 +57,7 @@ var Search2ch = {
         let json = JSON.parse(this._req.responseText);
 
         if(!json.success){
-            return this._defer.reject('Failed duo to server error.', this._req.responseText);
+            return this._defer.reject('Failed due to server error.', this._req.responseText);
         }
 
         let boards = [];
@@ -89,7 +91,7 @@ var Search2ch = {
         this._defer.resolve(boards);
     },
 
-}
+};
 
 
 //Polyfill for Firefox 24

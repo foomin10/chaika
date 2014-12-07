@@ -1,39 +1,4 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
- *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- *
- * The Original Code is chaika.
- *
- * The Initial Developer of the Original Code is
- * chaika.xrea.jp
- * Portions created by the Initial Developer are Copyright (C) 2009
- * the Initial Developer. All Rights Reserved.
- *
- * Contributor(s):
- *    flyson <flyson.moz at gmail.com>
- *
- * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
- * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- *
- * ***** END LICENSE BLOCK ***** */
+/* See license.txt for terms of usage */
 
 EXPORTED_SYMBOLS = ["ChaikaSearch"];
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
@@ -181,14 +146,34 @@ var ChaikaSearch = {
         let pluginFolder = ChaikaCore.getDataDir();
         pluginFolder.appendRelativePath('search');
 
-        //フォルダがまだ存在しない場合には、
-        //defaults フォルダからコピーしてくる
-        if(!pluginFolder.exists()){
-            let origPluginFolder = ChaikaCore.getDefaultsDir();
-            origPluginFolder.appendRelativePath('search');
+        let origPluginFolder = ChaikaCore.getDefaultsDir();
+        origPluginFolder.appendRelativePath('search');
 
+
+        if(!pluginFolder.exists()){
+            //フォルダがまだ存在しない場合には、
+            //defaults フォルダからコピーしてくる
             origPluginFolder.copyTo(ChaikaCore.getDataDir(), null);
+        }else{
+            //新規に追加されたデフォルトプラグインをコピーする
+
+            let entries = origPluginFolder.directoryEntries.QueryInterface(Ci.nsIDirectoryEnumerator);
+
+            while(true){
+                let origPlugin = entries.nextFile;
+                if(!origPlugin) break;
+
+                let plugin = pluginFolder.clone();
+                plugin.appendRelativePath(origPlugin.leafName);
+
+                if(!plugin.exists()){
+                    origPlugin.copyTo(pluginFolder, null);
+                }
+            }
+
+            entries.close();
         }
+
 
         return pluginFolder;
     },
@@ -259,7 +244,7 @@ var ChaikaSearchPlugin = {
      *
      * 検索結果を取得する用途がない場合、null を指定する
      *
-     * @param {String} term 検索文字列 (エンコード済みでない)
+     * @param {String} term 検索文字列 (URIEncode はされていないが, '<' などは ChaikaIO#escapeHTML により実体参照化されている)
      * @return {Promise} - 成功時: 以下のようなオブジェクトの配列を返す必要がある
      *     [
      *         {

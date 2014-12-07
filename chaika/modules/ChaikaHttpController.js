@@ -1,39 +1,4 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
- *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- *
- * The Original Code is chaika.
- *
- * The Initial Developer of the Original Code is
- * chaika.xrea.jp
- * Portions created by the Initial Developer are Copyright (C) 2009
- * the Initial Developer. All Rights Reserved.
- *
- * Contributor(s):
- *    flyson <flyson.moz at gmail.com>
- *
- * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
- * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- *
- * ***** END LICENSE BLOCK ***** */
+/* See license.txt for terms of usage */
 
 
 EXPORTED_SYMBOLS = ["ChaikaHttpController"];
@@ -250,21 +215,11 @@ ChaikaImageViewURLReplace.prototype = {
             file = file.clone();
         }
 
-        var data = ChaikaCore.io.readString(file);
+        var data = ChaikaCore.io.readUnknownEncodingString(file, true, 'utf-8', 'Shift_JIS');
 
-        //U+FFFD (REPLACEMENT CHARACTER) が含まれる場合には
-        //Shift-JISで保存されている旧式のファイルであるということなので
-        //Shift-JIS で再読込する
-        if(data.indexOf("\uFFFD") !== -1){
-            ChaikaCore.logger.warning("The encoding of ImageViewURLReplace.dat is Shift-JIS. Try to convert to UTF-8.");
-            data = ChaikaCore.io.readString(file, 'Shift-JIS');
-
-            //読み込みに成功していればUTF-8で保存し直す
-            if(data.indexOf("\uFFFD") === -1){
-                ChaikaCore.io.writeString(file, 'UTF-8', false, data);
-            }else{
-                ChaikaCore.logger.error('Fail in converting the encoding of ImageViewURLReplace.dat');
-            }
+        if(data === null){
+            ChaikaCore.logger.error('Fail in converting the encoding of ImageViewURLReplace.dat');
+            return;
         }
 
         var lines = data.replace(/\r/g, "\n").split(/\n+/);
@@ -618,21 +573,11 @@ ChaikaNGFiles.prototype = {
             ngFile = ngFile.clone();
         }
 
-        var data = ChaikaCore.io.readString(ngFile);
+        var data = ChaikaCore.io.readUnknownEncodingString(ngFile, true, 'utf-8', 'Shift_JIS');
 
-        //U+FFFD (REPLACEMENT CHARACTER) が含まれる場合には
-        //Shift-JISで保存されている旧式のファイルであるということなので
-        //Shift-JIS で再読込する
-        if(data.indexOf("\uFFFD") !== -1){
-            ChaikaCore.logger.warning("The encoding of NGFiles.txt is Shift-JIS. Try to convert to UTF-8.");
-            data = ChaikaCore.io.readString(ngFile, 'Shift-JIS');
-
-            //読み込みに成功していればUTF-8で保存し直す
-            if(data.indexOf("\uFFFD") === -1){
-                ChaikaCore.io.writeString(ngFile, 'UTF-8', false, data);
-            }else{
-                ChaikaCore.logger.error('Fail in converting the encoding of NGFiles.txt');
-            }
+        if(data === null){
+            ChaikaCore.logger.error('Fail in converting the encoding of NGFiles.txt');
+            return;
         }
 
         var lines = data.replace(/\r/g, "\n").split(/\n+/);
@@ -754,9 +699,9 @@ ChaikaNGFiles.prototype = {
             if(this.ngData[i].hash === hash){
                 uri = uri.QueryInterface(Ci.nsIURL);
 
-                var alertStr = decodeURIComponent(escape(
+                var alertStr = ChaikaCore.io.fromUTF8Octets(
                     'NGFiles.txt に基づき ' + uri.fileName + ' をブロックしました。\n説明: '
-                )) + this.ngData[i].description;
+                ) + this.ngData[i].description;
 
                 var alertsService = Cc["@mozilla.org/alerts-service;1"].getService(Ci.nsIAlertsService);
                 alertsService.showAlertNotification("chrome://chaika/content/icon.png", "Chaika", alertStr, false, "", null);

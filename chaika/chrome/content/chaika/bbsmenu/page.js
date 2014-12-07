@@ -1,39 +1,4 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
- *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- *
- * The Original Code is chaika.
- *
- * The Initial Developer of the Original Code is
- * chaika.xrea.jp
- * Portions created by the Initial Developer are Copyright (C) 2009
- * the Initial Developer. All Rights Reserved.
- *
- * Contributor(s):
- *    flyson <flyson.moz at gmail.com>
- *
- * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
- * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- *
- * ***** END LICENSE BLOCK ***** */
+/* See license.txt for terms of usage */
 
 Components.utils.import('resource://gre/modules/Services.jsm');
 Components.utils.import("resource://chaika-modules/ChaikaCore.js");
@@ -52,88 +17,129 @@ const MODE_SEARCH = 1;
 
 var Page = {
 
-    startup: function Page_startup(){
+    startup: function(){
         var tree = document.getElementById("bookmarks-view");
-        tree.collapsed = true;
         tree.setAttribute("treesize", ChaikaCore.pref.getChar("bbsmenu.tree_size"));
 
         this.showViewFoxAge2chMenu();
         SearchBox.init();
         PrefObserver.start();
-
-        setTimeout(function(){ Page.delayStartup(); }, 0);
+        Bbsmenu.init();
     },
 
-    delayStartup: function Page_delayStartup(){
-        var tree = document.getElementById("bookmarks-view");
-        tree.collapsed = false;
 
-        if(Bbsmenu.getItemCount() == 0){
-            BbsmenuUpdater.update();
-        }else{
-            Bbsmenu.initTree();
-        }
-    },
-
-    shutdown: function Page_shutdown(){
+    shutdown: function(){
         PrefObserver.stop();
         Tree.saveOpenedCategories();
     },
 
 
-    showViewFoxAge2chMenu: function Page_showViewFoxAge2chMenu(){
+    showViewFoxAge2chMenu: function(){
         var browser = ChaikaCore.browser.getBrowserWindow();
+
         if(browser && browser.document.getElementById("viewFoxAge2chSidebar")){
             document.getElementById("viewFoxAge2chMenu").hidden = false;
+            document.getElementById('viewFoxAge2chMenu-separator').hidden = false;
         }
     },
 
 
-    openLogManager: function Page_openLogManager(){
-        ChaikaCore.browser.openURL(Services.io.newURI("chaika://log-manager/", null, null), true);
+    /**
+     * URL を新しいタブで開く
+     * @param {String} aURL 開く URL
+     */
+    _openURL: function(aURL){
+        ChaikaCore.browser.openURL(Services.io.newURI(aURL, null, null), true);
     },
 
 
-    openDataFolder: function Page_openDataFolder(){
-        var logDir = ChaikaCore.getDataDir();
-        ChaikaCore.io.revealDir(logDir);
+    /**
+     * フォルダを開く
+     * @param {nsIFile} aDir 開くフォルダ
+     */
+    _openFolder: function(aDir){
+        ChaikaCore.io.reveal(aDir);
     },
 
 
-    openSupport: function Page_openSupport(){
-        ChaikaCore.browser.openURL(Services.io.newURI("chaika://support/", null, null), true);
+    /**
+     * ダイアログを開く
+     * @param {String} aURL 開くダイアログの URL
+     * @param {String} [aType] 開くダイアログのタイプ (windowtype)
+     */
+    _openDialog: function(aURL, aType){
+        ChaikaCore.browser.openWindow(aURL, aType);
     },
 
 
-    openReleaseNotes: function Page_openReleaseNotes(){
-        ChaikaCore.browser.openURL(Services.io.newURI("chaika://releasenotes/", null, null), true);
+    openLogManager: function(){
+        this._openURL("chaika://log-manager/");
+    },
+
+
+    openAboneManager: function(){
+        this._openDialog("chrome://chaika/content/settings/abone-manager.xul");
+    },
+
+
+    openAAManager: function(){
+        this._openDialog("chrome://chaika/content/settings/aa-manager.xul");
+    },
+
+
+    openReplacementManager: function(){
+        this._openDialog("chrome://chaika/content/settings/replacement-manager.xul");
+    },
+
+
+    openDataFolder: function(){
+        this._openFolder(ChaikaCore.getDataDir());
+    },
+
+
+    openSkinFolder: function(){
+        let skinDir = ChaikaCore.getDataDir();
+
+        skinDir.appendRelativePath('skin');
+        this._openFolder(skinDir);
+    },
+
+
+    openSearchPluginFolder: function(){
+        let pluginFolder = ChaikaCore.getDataDir();
+
+        pluginFolder.appendRelativePath('search');
+        this._openFolder(pluginFolder);
+    },
+
+
+    openLogFolder: function(){
+        this._openFolder(ChaikaCore.getLogDir());
+    },
+
+
+    openSupport: function(){
+        this._openURL("chaika://support/");
+    },
+
+
+    openReleaseNotes: function(){
+        this._openURL("chaika://releasenotes/");
     },
 
 
     openOnlineHelp: function(){
-        ChaikaCore.browser.openURL(Services.io.newURI("https://github.com/chaika/chaika/wiki", null, null), true);
+        this._openURL("https://github.com/chaika/chaika/wiki");
     },
 
 
-    openSettings: function Page_openSettings(){
-        var winMediator = Cc["@mozilla.org/appshell/window-mediator;1"]
-            .getService(Ci.nsIWindowMediator);
-        var settingdWin = winMediator.getMostRecentWindow("chaika:settings");
-        if(settingdWin){
-            settingdWin.focus();
-            return;
-        }
+    openHomePage: function(){
+        this._openURL("https://github.com/chaika/chaika");
+    },
 
-        var settingDialogURL = "chrome://chaika/content/settings/settings.xul";
-        var features = "";
-        try{
-            var pref = Cc["@mozilla.org/preferences-service;1"].getService(Ci.nsIPrefBranch);
-            var instantApply = pref.getBoolPref("browser.preferences.instantApply");
-            features = "chrome,titlebar,toolbar,centerscreen" + (instantApply ? ",dialog=no" : ",modal");
-        }catch(ex){
-            features = "chrome,titlebar,toolbar,centerscreen,modal";
-        }
-        window.openDialog(settingDialogURL, "", features);
+
+    openSettings: function(){
+        this._openDialog("chrome://chaika/content/settings/settings.xul", "chaika:settings");
     },
 
 
@@ -143,7 +149,6 @@ var Page = {
             browser.document.getElementById("viewFoxAge2chSidebar").doCommand();
         }
     }
-
 };
 
 
@@ -171,7 +176,6 @@ var PrefObserver = {
         if(aData == "tree_size"){
             Tree.changeTreeSize();
         }
-
     }
 
 };
@@ -279,7 +283,8 @@ var SearchBox = {
         Notification.removeAll();
         Notification.info('検索中');
 
-        let promise = ChaikaSearch.getPlugin(this.getSearchMode()).search(aSearchStr);
+        let plugin = ChaikaSearch.getPlugin(this.getSearchMode());
+        let promise = plugin.search(ChaikaCore.io.escapeHTML(aSearchStr));
 
         promise.then(this._showResults, this._onError)
                .then(null, this._onError);
@@ -293,7 +298,9 @@ var SearchBox = {
 
         results.forEach((board) => {
             let boardItem = document.createElement('board');
-            boardItem.setAttribute('title', board.title);
+            let boardTitle = ChaikaCore.io.unescapeHTML(board.title);
+
+            boardItem.setAttribute('title', boardTitle);
             boardItem.setAttribute('url', board.url || '');
             boardItem.setAttribute('type', board.type || ChaikaBoard.BOARD_TYPE_PAGE);
 
@@ -305,9 +312,15 @@ var SearchBox = {
 
                 board.threads.forEach((thread) => {
                     let threadItem = document.createElement('thread');
+                    let threadTitle = ChaikaCore.io.unescapeHTML(thread.title);
+
+                    if(thread.post){
+                        threadTitle += ' [' + thread.post + ']';
+                    }
+
                     threadItem.setAttribute('url', thread.url);
-                    threadItem.setAttribute('title', thread.title + ' [' + (thread.post || '-') + ']');
-                    threadItem.setAttribute('boardName', board.title);
+                    threadItem.setAttribute('title', threadTitle);
+                    threadItem.setAttribute('boardName', boardTitle);
 
                     boardItem.appendChild(threadItem);
                 });
@@ -401,6 +414,16 @@ var BbsmenuUpdater = {
 
 var Bbsmenu = {
 
+    init: function(){
+        this._DOMParser = Cc["@mozilla.org/xmlextras/domparser;1"].createInstance(Ci.nsIDOMParser);
+
+        if(this.getItemCount() === 0){
+            BbsmenuUpdater.update();
+        }else{
+            this.initTree();
+        }
+    },
+
     initTree: function Bbsmenu_initTree(){
         var doc = this.getBbsmenuDoc();
         Tree.initTree(doc, MODE_BBSMENU);
@@ -408,10 +431,9 @@ var Bbsmenu = {
 
     update: function Bbsmenu_update(aHtmlSource){
         var parserUtils = Cc["@mozilla.org/parserutils;1"].getService(Ci.nsIParserUtils);
-        var domParser = Cc["@mozilla.org/xmlextras/domparser;1"].createInstance(Ci.nsIDOMParser);
         var ioService = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
 
-        var bbsmenuDoc = domParser.parseFromString("<root xmlns:html='http://www.w3.org/1999/xhtml'/>", "text/xml");
+        var bbsmenuDoc = this._DOMParser.parseFromString("<root xmlns:html='http://www.w3.org/1999/xhtml'/>", "text/xml");
         var fragment = parserUtils.parseFragment(aHtmlSource, 0, false, null, bbsmenuDoc.documentElement);
         bbsmenuDoc.documentElement.appendChild(fragment);
 
@@ -502,16 +524,45 @@ var Bbsmenu = {
         return result;
     },
 
-    getBbsmenuDoc: function Bbsmenu_getBbsmenuDoc(){
-        var bbsmenuDoc = (new DOMParser()).parseFromString("<bbsmenu/>", "text/xml");
-        var outsideDoc = this.getOutsideDoc();
 
-        var nodes = outsideDoc.documentElement.childNodes;
-        for(var i=0; i<nodes.length; i++){
-            var node = nodes[i];
-            var newNode = bbsmenuDoc.importNode(node, true);
-            bbsmenuDoc.documentElement.appendChild(newNode);
+    openOutsideXML: function(){
+        let userOutsideFile = ChaikaCore.getDataDir();
+        userOutsideFile.appendRelativePath('favorite_boards.xml');
+
+        ChaikaCore.io.reveal(userOutsideFile);
+    },
+
+
+    getBbsmenuDoc: function Bbsmenu_getBbsmenuDoc(){
+        let bbsmenuDoc = this._DOMParser.parseFromString("<bbsmenu/>", "text/xml");
+
+        let importOutsideDoc = function(file){
+            let doc = this.getOutsideDoc(file);
+
+            Array.slice(doc.documentElement.childNodes).forEach((node) => {
+                let bbsmenuNode = bbsmenuDoc.importNode(node, true);
+                bbsmenuDoc.documentElement.appendChild(bbsmenuNode);
+            });
+        }.bind(this);
+
+
+        let defaultOutsideFile = ChaikaCore.getDefaultsDir();
+        defaultOutsideFile.appendRelativePath("outside.xml");
+
+        importOutsideDoc(defaultOutsideFile);
+
+        let userOutsideFile = ChaikaCore.getDataDir();
+        userOutsideFile.appendRelativePath('favorite_boards.xml');
+
+        if(!userOutsideFile.exists()){
+            let defaultUserOutside = ChaikaCore.getDefaultsDir();
+            defaultUserOutside.appendRelativePath('favorite_boards.xml');
+
+            defaultUserOutside.copyTo(userOutsideFile.parent, null);
         }
+
+        importOutsideDoc(userOutsideFile);
+
 
         var storage = ChaikaCore.storage;
         var sql = "SELECT title, url, path, board_type, is_category FROM bbsmenu;";
@@ -554,30 +605,14 @@ var Bbsmenu = {
     },
 
 
-    getOutsideDoc: function Bbsmenu_getOutsideDoc(){
-        var outsideXMLFile = ChaikaCore.getDataDir();
-        outsideXMLFile.appendRelativePath("outside.xml");
+    getOutsideDoc: function Bbsmenu_getOutsideDoc(file){
+        let outsideXMLString = ChaikaCore.io.readString(file, 'UTF-8');
+        let outsideDoc = this._DOMParser.parseFromString(outsideXMLString, 'text/xml');
 
-        if(!outsideXMLFile.exists()){
-            var defaultOutsideFile = ChaikaCore.getDefaultsDir();
-            defaultOutsideFile.appendRelativePath("outside.xml");
-            defaultOutsideFile.copyTo(outsideXMLFile.parent, null);
-
-            outsideXMLFile = outsideXMLFile.clone();
-        }
-
-
-        var outsideXMLString = ChaikaCore.io.readString(outsideXMLFile, 'UTF-8');
-        var outsideDoc = (new DOMParser()).parseFromString(outsideXMLString, 'text/xml');
-
-
-        var categoryNodes = outsideDoc.getElementsByTagName("category");
-
-        for(var i=0; i<categoryNodes.length; i++){
-            let node = categoryNodes[i];
-            node.setAttribute("isContainer", "true");
-            node.setAttribute("isOpen", "false");
-        }
+        Array.slice(outsideDoc.getElementsByTagName('category')).forEach((category) => {
+            category.setAttribute('isContainer', 'true');
+            category.setAttribute('isOpen', 'false');
+        });
 
         return outsideDoc;
     }

@@ -1,39 +1,4 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
- *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- *
- * The Original Code is chaika.
- *
- * The Initial Developer of the Original Code is
- * chaika.xrea.jp
- * Portions created by the Initial Developer are Copyright (C) 2009
- * the Initial Developer. All Rights Reserved.
- *
- * Contributor(s):
- *    flyson <flyson.moz at gmail.com>
- *
- * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
- * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- *
- * ***** END LICENSE BLOCK ***** */
+/* See license.txt for terms of usage */
 
 
 EXPORTED_SYMBOLS = ["ChaikaRoninLogin", "ChaikaBeLogin", "ChaikaP2Login"];
@@ -159,6 +124,14 @@ var ChaikaRoninLogin = {
      */
     _enabled: false,
 
+
+    /**
+     * ID を取得中か否か
+     * @type {Boolean}
+     */
+    _processing: false,
+
+
     /**
      * 起動時に実行される
      */
@@ -176,11 +149,16 @@ var ChaikaRoninLogin = {
 
 
     get enabled(){
-        return this._enabled && this.isLoggedIn();
+        let isLoggedIn = this.isLoggedIn();
+
+        ChaikaCore.logger.debug('internal flag:', this._enabled, 'logged in:', isLoggedIn);
+
+        return this._enabled && isLoggedIn;
     },
 
 
     set enabled(bool){
+        ChaikaCore.logger.debug('set internal flag to:', bool);
         this._enabled = bool;
     },
 
@@ -264,10 +242,25 @@ var ChaikaRoninLogin = {
 
 
     login: function ChaikaRoninLogin_login(){
-        //すでに有効なセッションIDが存在する場合にはスキップする
-        if(this.isLoggedIn()){
-            return;
+        var account = this.getLoginInfo();
+
+        //有効なアカウントが存在しないとき
+        if(!account){
+            return ChaikaCore.logger.debug('Login Error: No Account Available');
         }
+
+        //すでに有効なセッションIDが存在するとき
+        if(this.isLoggedIn()){
+            return ChaikaCore.logger.debug('Login Error: Session ID Is Still Valid');
+        }
+
+        //Session ID を取得中なとき
+        if(this._processing){
+            return ChaikaCore.logger.debug('Login Error: Another Process Is Running');
+        }
+
+
+        this._processing = true;
 
         //確実にログアウトする
         this.logout();
@@ -278,14 +271,8 @@ var ChaikaRoninLogin = {
         httpChannel.setRequestHeader("Content-Type", "application/x-www-form-urlencoded", false);
         httpChannel = httpChannel.QueryInterface(Ci.nsIUploadChannel);
 
-        var account = this.getLoginInfo();
-
-        if(!account){
-            return;
-        }
-
         var strStream = Cc["@mozilla.org/io/string-input-stream;1"].createInstance(Ci.nsIStringInputStream);
-        var postString = String("ID=" + account.id + "&PW=" + account.password);
+        var postString = "ID=" + account.id + "&PW=" + account.password;
 
         strStream.setData(postString, postString.length);
         httpChannel.setUploadStream(strStream, "application/x-www-form-urlencoded", -1);
@@ -298,6 +285,8 @@ var ChaikaRoninLogin = {
     logout: function ChaikaRoninLogin_logout(){
         ChaikaCore.pref.setChar("login.ronin.session_id", "");
 
+        ChaikaCore.logger.debug('Logged Out');
+
         var os = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
         os.notifyObservers(null, "ChaikaRoninLogin:Logout", "OK");
     },
@@ -307,9 +296,14 @@ var ChaikaRoninLogin = {
         //  ※実際の有効期限は24時間である
         //  https://pink-chan-store.myshopify.com/pages/developers
         let lastAuthTime = ChaikaCore.pref.getInt("login.ronin.last_auth_time");
-        let now = Date.now();
+        let now = Date.now() / 1000;
+        let sessionID = ChaikaCore.pref.getChar("login.ronin.session_id");
 
-        return (now - lastAuthTime) < 6 * 60 * 60 * 1000 && ChaikaCore.pref.getChar("login.ronin.session_id");
+        ChaikaCore.logger.debug(now, lastAuthTime, now - lastAuthTime, sessionID);
+
+        return (now - lastAuthTime) < 6 * 60 * 60 &&
+               typeof sessionID === 'string' &&
+               sessionID !== "";
     },
 
     _getLoginURI: function ChaikaRoninLogin__getLoginURI(){
@@ -325,8 +319,11 @@ var ChaikaRoninLogin = {
         this.logout();
 
         ChaikaCore.logger.debug("Auth: NG");
+
         var os = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
         os.notifyObservers(null, "Chaika2chViewer:Auth", "NG");
+
+        this._processing = false;
     },
 
     /**
@@ -334,32 +331,41 @@ var ChaikaRoninLogin = {
      */
     _onSuccess: function ChaikaRoninLogin__onSuccess(aSessionID){
         ChaikaCore.pref.setChar("login.ronin.session_id", aSessionID);
-        ChaikaCore.pref.setInt("login.ronin.last_auth_time", Date.now());
+        ChaikaCore.pref.setInt("login.ronin.last_auth_time", Date.now() / 1000);
 
-        ChaikaCore.logger.debug("Auth: OK");
+        ChaikaCore.logger.debug("Auth: OK; Session ID:", aSessionID);
+
         var os = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
         os.notifyObservers(null, "Chaika2chViewer:Auth", "OK");
+
+        this._processing = false;
     },
 
+
     _listener: {
-        onStartRequest: function authListener_onStartRequest(aRequest, aContext){
+        onStartRequest: function(aRequest, aContext){
             this._binaryStream = Cc["@mozilla.org/binaryinputstream;1"]
                     .createInstance(Ci.nsIBinaryInputStream);
             this._data = [];
+
+            ChaikaCore.logger.debug('Start Request');
         },
 
-        onDataAvailable: function authListener_onDataAvailable(aRequest, aContext,
-                                            aInputStream, aOffset, aCount){
+        onDataAvailable: function(aRequest, aContext, aInputStream, aOffset, aCount){
             this._binaryStream.setInputStream(aInputStream);
             this._data.push(this._binaryStream.readBytes(aCount));
+
+            ChaikaCore.logger.debug('Data Available; Received Data:', this._data.join(''));
         },
 
-        onStopRequest: function authListener_onStopRequest(aRequest, aContext, aStatus){
+        onStopRequest: function(aRequest, aContext, aStatus){
             var data = this._data.join("");
 
+            aRequest.QueryInterface(Ci.nsIHttpChannel);
             ChaikaCore.logger.debug("Auth Response: " + data);
+            ChaikaCore.logger.debug('HTTP Status:', aRequest.responseStatus);
 
-            if(data.lastIndexOf("SESSION-ID=ERROR:", 0) !== -1){
+            if(data.startsWith("SESSION-ID=ERROR:")){
                 ChaikaRoninLogin._onFail();
                 return;
             }

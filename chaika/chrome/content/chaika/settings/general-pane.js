@@ -20,6 +20,7 @@
  *
  * Contributor(s):
  *    flyson <flyson at users.sourceforge.jp>
+ *    nodaguti <nodaguti at gmail.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -38,10 +39,8 @@
 var gGeneralPane = {
 
     startup: function(){
-        setContainerDisabled("extensions.chaika.appoint_data_dir",
-                "boxDataDir", true);
-        setContainerDisabled("extensions.chaika.http_proxy_mode",
-                "txtProxyValue", "2");
+        setContainerDisabled("extensions.chaika.appoint_data_dir", "boxDataDir", true);
+        setContainerDisabled("extensions.chaika.http_proxy_mode", "txtProxyValue", 2);
     },
 
     selectDataDir: function(){
@@ -75,5 +74,9 @@ var gGeneralPane = {
         var txtDataDir = document.getElementById("txtDataDir");
         if(!dataDirPref.value) return "";
         return dataDirPref.value;
+    },
+
+    openReplacementManager: function(){
+        ChaikaCore.browser.openWindow("chrome://chaika/content/settings/replacement-manager.xul");
     }
 };

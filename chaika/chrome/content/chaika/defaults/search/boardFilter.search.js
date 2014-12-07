@@ -1,3 +1,5 @@
+/* See license.txt for terms of usage */
+
 Components.utils.import("resource://chaika-modules/ChaikaCore.js");
 
 try{
@@ -15,7 +17,7 @@ var BoardFilter = {
 
     name: '板名フィルタ',
 
-    version: '1.0.0pre',
+    version: '1.0.0',
 
     updateURL: '%%ChaikaDefaultsDir%%/search/boardFilter.search.js',
 
@@ -64,4 +66,4 @@ var BoardFilter = {
         return this._defer.promise;
     },
 
-}
+};

@@ -1,44 +1,10 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
- *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- *
- * The Original Code is chaika.
- *
- * The Initial Developer of the Original Code is
- * chaika.xrea.jp
- * Portions created by the Initial Developer are Copyright (C) 2008
- * the Initial Developer. All Rights Reserved.
- *
- * Contributor(s):
- *    flyson <flyson.moz at gmail.com>
- *
- * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
- * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- *
- * ***** END LICENSE BLOCK ***** */
+/* See license.txt for terms of usage */
 
 
 EXPORTED_SYMBOLS = ["ChaikaCore"];
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+Components.utils.import('resource://gre/modules/Services.jsm');
 Components.utils.import("resource://gre/modules/PrivateBrowsingUtils.jsm");
 Components.utils.import("resource://chaika-modules/ChaikaAddonInfo.js");
 
@@ -855,43 +821,31 @@ ChaikaBrowser.prototype = {
             }
             return;
         }
-
-        // Firefox/Seamonkey 以外のブラウザでの処理はここに書く
-
-        ChaikaCore.logger.warning("Acquisition of browser window failed");
-        this.openNewWindow(aURI);
     },
 
 
     /**
-     * 新しいブラウザウィンドウで指定した URI を開く。
-     * @param {nsIURI} aURI 新しいウィンドウで開くページの URI
+     * 新しいウィンドウを開く
+     * @param {String} aURL 開くウィンドウの URL
+     * @param {String} [aType] 開くウィンドウのタイプ (windowtype) 指定すると該当ウィンドウがある場合に再利用する
+     * @param {Any} [args] ウィンドウに渡す引数
      */
-    openNewWindow: function ChaikaBrowser_openNewWindow(aURI){
-        if(!(aURI instanceof Ci.nsIURI)){
-            throw makeException(Cr.NS_ERROR_INVALID_POINTER);
+    openWindow: function(aURL, aType, ...args){
+        if(aType){
+            let wm = Cc["@mozilla.org/appshell/window-mediator;1"].getService(Ci.nsIWindowMediator);
+            let win = wm.getMostRecentWindow(aType);
+
+            if(win){
+                win.focus();
+                return;
+            }
         }
 
-        var pref = Cc["@mozilla.org/preferences-service;1"].getService(Ci.nsIPrefBranch);
-        try{
-            var browserURL = pref.getCharPref("browser.chromeURL");
-        }catch(ex){
-            ChaikaCore.logger.error(ex);
-            throw makeException(ex.result);
-        }
+        // For Firefox 26-
+        // (Spread Operator for function calls is supported on Firefox 27+)
+        let _args = [aURL, "_blank", "chrome, toolbar, centerscreen, resizable, minimizable", ...args];
 
-        var argString = Cc["@mozilla.org/supports-string;1"].createInstance(Ci.nsISupportsString);
-        argString.data = aURI.spec;
-
-        var winWatcher = Cc["@mozilla.org/embedcomp/window-watcher;1"]
-                .getService(Ci.nsIWindowWatcher);
-        try{
-            winWatcher.openWindow(null, browserURL, "_blank",
-                    "chrome,all,dialog=no", argString);
-        }catch(ex){
-            ChaikaCore.logger.error(ex);
-            throw makeException(ex.result);
-        }
+        this.getBrowserWindow().openDialog.apply(null, _args);
     },
 
 
@@ -900,9 +854,9 @@ ChaikaBrowser.prototype = {
      * @return {ChromeWindow} ブラウザウィンドウ
      */
     getBrowserWindow: function ChaikaBrowser_getBrowserWindow(){
-        var windowMediator = Cc["@mozilla.org/appshell/window-mediator;1"]
-                .getService(Ci.nsIWindowMediator);
-        return windowMediator.getMostRecentWindow("navigator:browser");
+        var wm = Cc["@mozilla.org/appshell/window-mediator;1"].getService(Ci.nsIWindowMediator);
+
+        return wm.getMostRecentWindow("navigator:browser");
     },
 
 
@@ -1011,6 +965,7 @@ ChaikaIO.prototype = {
     readString: function ChaikaIO_readString(aFile, aCharset){
         var result = [];
         var stream;
+
         try{
             stream = this.getFileInputStream(aFile, aCharset);
         }catch(ex){
@@ -1019,8 +974,9 @@ ChaikaIO.prototype = {
         }
 
         try{
-            var str = {};
-            while (stream.readString(1024*16, str) != 0){
+            let str = {};
+
+            while (stream.readString(1024*16, str) !== 0){
                 result.push(str.value);
             }
         }catch(ex){
@@ -1031,6 +987,34 @@ ChaikaIO.prototype = {
         }
 
         return result.join("");
+    },
+
+
+    /**
+     * エンコーディングが不明なファイルを読み込む
+     * @param {nsIFile} file 読みこむファイル
+     * @param {Boolean} overrideOrigFile 元のファイルを UTF-8 で上書きするかどうか
+     * @param {String} suspects エンコーディングの候補
+     */
+    readUnknownEncodingString: function(file, overrideOrigFile, ...suspects){
+        var encoding = suspects.shift();
+        var fileString = this.readString(file, encoding);
+
+        //U+FFFD = REPLACEMENT CHARACTER
+        if(fileString.contains('\uFFFD')){
+            if(suspects.length > 0){
+                fileString = this.readUnknownEncodingString(file, overrideOrigFile, suspects);
+            }else{
+                ChaikaCore.logger.error('Unable to read string from ' + file.leafName + ': Unknown Encoding');
+                return null;
+            }
+        }
+
+        if(fileString !== null && overrideOrigFile){
+            this.writeString(file, 'utf-8', false, fileString);
+        }
+
+        return fileString;
     },
 
 
@@ -1075,10 +1059,10 @@ ChaikaIO.prototype = {
             fileStream.init(aFile, PR_RDONLY, PR_PERMS_FILE, 0);
             binaryStream.setInputStream(fileStream);
 
-            var str;
             while(binaryStream.available() > 1024*16){
                 result.push(binaryStream.readBytes(1024*16));
             }
+
             result.push(binaryStream.readBytes(binaryStream.available()));
         }catch(ex){
             ChaikaCore.logger.error(ex);
@@ -1126,34 +1110,35 @@ ChaikaIO.prototype = {
 
 
     /**
-     * ファイラで指定したディレクトリを開く
-     * @param {nsIFile} aDir 開くディレクトリ
+     * ファイラでファイルやディレクトリを開く
+     * @param {nsIFile} aFile 開くファイルまたはディレクトリ
      * @return {Boolean} 成功したら真を返す
      */
-    revealDir: function ChaikaIO_revealDir(aDir){
-        if(!(aDir instanceof Ci.nsIFile)){
+    reveal: function(aFile){
+        if(!(aFile instanceof Ci.nsIFile)){
             throw makeException(Cr.NS_ERROR_INVALID_POINTER);
         }
-        if(!aDir.isDirectory()){
-            throw makeException(Cr.NS_ERROR_INVALID_ARG);
-        }
 
-        try{ // ディレクトリに関連づけられたファイラで開く
-            aDir.launch();
+        try{
+            // 関連づけられたファイラで開く
+            aFile.launch();
             return true;
         }catch(ex){}
 
-        try{ // OS の機能でディレクトリを開く
-            aDir.reveal();
+        try{
+            // OS の機能で開く
+            // aFile がファイルの場合にはファイルを内包しているフォルダを開く
+            aFile.reveal();
             return true;
         }catch(ex){}
 
-        try{ // file: プロトコルで開く
-            var ioService = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
-            var dirURI = ioService.newFileURI(aDir);
-            var protocolService = Cc["@mozilla.org/uriloader/external-protocol-service;1"]
-                        .getService(Ci.nsIExternalProtocolService);
-            protocolService.loadUrl(dirURI);
+        try{
+            // file: プロトコルで開く
+            let uri = Services.io.newFileURI(aFile);
+            let protocolService = Cc["@mozilla.org/uriloader/external-protocol-service;1"]
+                                    .getService(Ci.nsIExternalProtocolService);
+            protocolService.loadUrl(uri);
+
             return true;
         }catch(ex){
             ChaikaCore.logger.error(ex);
@@ -1166,26 +1151,52 @@ ChaikaIO.prototype = {
     /**
      * HTML実体参照にエンコードする
      * @param {String} aStr エンコードする文字列
-     * @return {String}　エンコード後の文字列
+     * @return {String} エンコード後の文字列
      */
     escapeHTML: function ChaikaCore_escapeHTML(aStr){
-        return aStr.split('&').join('&amp;')
-                    .split('<').join('&lt;')
-                    .split('>').join('&gt;')
-                    .split('"').join('&quot;');
+        return aStr.replace(/&/g, '&amp;')
+                   .replace(/</g, '&lt;')
+                   .replace(/>/g, '&gt;')
+                   .replace(/"/g, '&quot;')
+                   .replace(/'/g, '&#039;')
+                   .replace(/\u00a9/g, '&copy;');
     },
 
 
     /**
      * HTML実体参照をデコードする
      * @param {String} aStr デコードする文字列
-     * @return {String}　デコード後の文字列
+     * @return {String} デコード後の文字列
      */
     unescapeHTML: function ChaikaCore_unescapeHTML(aStr){
-        return aStr.split('&lt;').join('<')
-                    .split('&gt;').join('>')
-                    .split('&quot;').join('"')
-                    .split('&amp;').join('&');
+        return aStr.replace(/&lt;/g, '<')
+                   .replace(/&gt;/g, '>')
+                   .replace(/&quot;/g, '"')
+                   .replace(/&#039;/g, "'")
+                   .replace(/&amp;/g, '&')
+                   .replace(/&copy;/g, this.fromUTF8Octets('©'));
+    },
+
+
+    /**
+     * UTF-8 バイト列から文字列へ変換する
+     * @param {Octets} octets UTF-8 バイト列
+     * @return 文字列
+     * @note http://nanto.asablo.jp/blog/2006/10/23/572458 より
+     */
+    fromUTF8Octets: function(octets){
+        return decodeURIComponent(escape(octets));
+    },
+
+
+    /**
+     * 文字列から UTF-8 バイト列へ変換する
+     * @param {String} string 文字列
+     * @return UTF-8 バイト列
+     * @note http://nanto.asablo.jp/blog/2006/10/23/572458 より
+     */
+    toUTF8Octets: function(string){
+        return unescape(encodeURIComponent(string));
     }
 };
 

@@ -1,40 +1,4 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
- *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- *
- * The Original Code is chaika.
- *
- * The Initial Developer of the Original Code is
- * chaika.xrea.jp
- * Portions created by the Initial Developer are Copyright (C) 2008
- * the Initial Developer. All Rights Reserved.
- *
- * Contributor(s):
- *    flyson <flyson.moz at gmail.com>
- *
- * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
- * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- *
- * ***** END LICENSE BLOCK ***** */
-
+/* See license.txt for terms of usage */
 
 function Post(aThread, aBoard){
     this._thread = aThread;
@@ -206,17 +170,8 @@ Post.prototype = {
         var tripPos = name.indexOf("#");
 
         if(tripPos !== -1){
-            var tripKey = name.substring(tripPos);
-
-            var uniConverter = Cc["@mozilla.org/intl/scriptableunicodeconverter"]
-                    .createInstance(Ci.nsIScriptableUnicodeConverter);
-            uniConverter.charset = gPost.charset;
-
-            tripKey = uniConverter.convertToByteArray(tripKey, {}).map((charCode) => {
-                    return String.fromCharCode(charCode);
-            }).join("");
-
-            var trip = Trip.getTrip(tripKey);
+            let tripKey = name.substring(tripPos);
+            let trip = Trip.getTrip(tripKey);
 
             name = [
                 name.substring(0, tripPos),
@@ -257,27 +212,17 @@ Post.prototype = {
         var kakikomiFile = ChaikaCore.getDataDir();
         kakikomiFile.appendRelativePath("kakikomi.txt");
 
-        //すでに存在する kakikomi.txt のエンコーディングが
-        //Shift-JIS だった場合には, 自動的に UTF-8 へと変換する
+
         var encoding = 'UTF-8';
 
         if(kakikomiFile.exists()){
-            var data = ChaikaCore.io.readString(kakikomiFile);
+            //すでに存在する kakikomi.txt のエンコーディングが
+            //Shift-JIS だった場合には, 自動的に UTF-8 へと変換する
+            var data = ChaikaCore.io.readUnknownEncodingString(kakikomiFile, true, 'utf-8', 'Shift_JIS');
 
-            //U+FFFD (REPLACEMENT CHARACTER) が含まれる場合には
-            //Shift-JISで保存されているということなので
-            //Shift-JIS で再読込する
-            if(data.indexOf("\uFFFD") !== -1){
-                ChaikaCore.logger.warning("The encoding of kakikomi.txt is Shift-JIS. Try to convert to UTF-8.");
-                data = ChaikaCore.io.readString(kakikomiFile, 'Shift-JIS');
-
-                //読み込みに成功していればUTF-8で保存し直す
-                if(data.indexOf("\uFFFD") === -1){
-                    ChaikaCore.io.writeString(kakikomiFile, 'UTF-8', false, data);
-                }else{
-                    ChaikaCore.logger.error('Fail in converting the encoding of kakikomi.txt');
-                    encoding = 'Shift-JIS';
-                }
+            //変換に失敗した場合は Shift_JIS のまま
+            if(!data){
+                encoding = 'Shift_JIS';
             }
         }
 
@@ -310,6 +255,7 @@ Post.prototype = {
 
         if(ChaikaRoninLogin.enabled){
             postData.push("sid=" + encodeURIComponent(ChaikaCore.pref.getChar('login.ronin.session_id')));
+            ChaikaCore.logger.debug('Ronin Enabled:\n', postData.join('\n'));
         }
 
         this._httpRequest.post(postData.join("&"));
@@ -707,16 +653,10 @@ PostJBBSNewThread.prototype = Object.create(Post2chNewThread.prototype, {
             var ioService = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
             var bbs = this._board.url.directory.match(/\/([^\/]+)\/?$/)[1];
             var dir = this._board.url.directory.match(/\/([^\/]+)\/?/)[1];
-            var postURI;
-
-            if(this._board.url.host.contains('jbbs.shitaraba.net')){
-                postURI = 'http://jbbs.shitaraba.net/bbs/write.cgi/';
-            }else{
-                postURI = 'http://jbbs.livedoor.jp/bbs/write.cgi/';
-            }
+            var postURI = ioService.newURI('http://jbbs.shitaraba.net/bbs/write.cgi/' +dir + '/' + bbs + '/new/', null, null);
 
             this._listener = aListener;
-            this._httpRequest = new HttpRequest(ioService.newURI(postURI + dir + '/' + bbs + '/new/', null, null), null, this);
+            this._httpRequest = new HttpRequest(postURI, this._board.url, this);
 
             var postData = [];
             postData.push("BBS="    + bbs);

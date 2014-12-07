@@ -1,41 +1,4 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
- *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- *
- * The Original Code is chaika.
- *
- * The Initial Developer of the Original Code is
- * chaika.xrea.jp
- * Portions created by the Initial Developer are Copyright (C) 2014
- * the Initial Developer. All Rights Reserved.
- *
- * Contributor(s):
- *    flyson <flyson.moz at gmail.com>
- *    nodaguti <nodaguti at gmail.com>
- *
- * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
- * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- *
- * ***** END LICENSE BLOCK ***** */
-
+/* See license.txt for terms of usage */
 
 Components.utils.import('resource://chaika-modules/ChaikaCore.js');
 Components.utils.import('resource://chaika-modules/ChaikaAA.js');
@@ -64,6 +27,11 @@ var gAAManager = {
         ;
 
         this._aaTextbox.style.font = fontStyle;
+
+        //コンテキストメニューから呼ばれた場合
+        if('arguments' in window && typeof window.arguments[0] === 'string'){
+            setTimeout(() => { this._view.appendItem('aa', '', window.arguments[0]); }, 0);
+        }
     },
 
 
@@ -134,11 +102,11 @@ var gAAManager = {
     },
 
 
-    insertAA: function(){
+    insertAA: function(body){
         let title = window.prompt('AA のタイトルを入力して下さい.', '', '');
         if(!title) return;
 
-        this._view.appendItem('aa', title);
+        this._view.appendItem('aa', title, body);
     },
 
 
@@ -146,27 +114,29 @@ var gAAManager = {
         let fp = Cc["@mozilla.org/filepicker;1"].createInstance(Ci.nsIFilePicker);
 
         fp.init(window, 'AAList.txt の選択', Ci.nsIFilePicker.modeOpen);
-        fp.appendFilters(Ci.nsIFilePicker.filterAll | Ci.nsIFilePicker.filterText);
+        fp.appendFilters(Ci.nsIFilePicker.filterText);
 
         let rv = fp.show();
 
-        if(rv === Ci.nsIFilePicker.returnOK || rv === Ci.nsIFilePicker.returnReplace){
+        if(rv === Ci.nsIFilePicker.returnOK){
             let file = fp.file;
             let aaListString = ChaikaCore.io.readString(file, 'Shift_JIS');
             let aaGroupTitles = aaListString.match(/^\[[^\]]+\]$/mg);
             let aaGroups = aaListString.split(/^\[[^\]]+\]$/m);
             let aaTables = {};
 
-            aaGroupTitles = Array.slice(aaGroupTitles).map((title) => {
-                return title.replace(/^\[/, '').replace(/\]$/, '');
-            });
+            aaGroupTitles = aaGroupTitles.map((title) => title.replace(/^\[|\]$/g, ''));
 
+            // AAList.txt は [aalist] で始まるため, 先頭に空要素ができるのを削除
             aaGroups.shift();
 
             aaGroups.forEach((group, index) => {
                 if(aaGroupTitles[index].toLowerCase() === 'aalist'){
                     //一行AA
                     group.split(/[\r\n]+/).forEach((line) => {
+                        //空行
+                        if(!!line) return;
+
                         //複数行AAのタイトル
                         if(line.startsWith('*')) return;
 
@@ -240,17 +210,13 @@ AATreeView.prototype = {
         });
     },
 
-    appendItem: function(type, title, value){
-        ChaikaCore.logger.debug('Append Item:', type, title, value);
-
+    appendItem: function(type, title, body){
         let selectedIndex = this.selectedIndex;
         let parentIndex;
-
 
         if(selectedIndex === -1){
             selectedIndex = this.rowCount - 1;
         }
-
 
         if(this.isContainer(selectedIndex) && type === 'aa'){
             parentIndex = selectedIndex;
@@ -258,7 +224,7 @@ AATreeView.prototype = {
             parentIndex = this.getParentIndex(selectedIndex);
         }
 
-        title = this._getUniqueName(parentIndex, title);
+        title = this._getUniqueName(parentIndex, title || 'Untitled');
 
 
         let parentNode = this._visibleNodes[parentIndex] || this._xml;
@@ -269,31 +235,31 @@ AATreeView.prototype = {
             return window.alert('AA とフォルダを同じ階層に置くことはできません.');
         }
 
+        ChaikaCore.logger.debug('Append Item:', 'parent:', parentNode.getAttribute('title'),
+                                'type:', type, 'title:', title, 'body:', body);
+
 
         node.setAttribute('title', title);
 
-        if(value){
-            node.appendChild(document.createTextNode(value));
+        if(type === 'aa'){
+            node.appendChild(document.createTextNode(body || ''));
         }
 
         parentNode.appendChild(node);
 
 
-        //open parent folders
-        let folder = node;
-
-        while(folder = folder.parentNode){
-            if(folder.nodeName === 'folder'){
-                folder.setAttribute('opened', 'true');
-            }
+        //open the parent
+        if(parentNode.nodeName === 'folder'){
+            parentNode.setAttribute('opened', 'true');
         }
+
+        let oldRowCount = this.rowCount;
 
         this._buildVisibleNodes();
 
+        let newIndex = this._visibleNodes.indexOf(node);
 
-        let newIndex = this._visibleNodes.indexOf(parentNode.lastChild);
-
-        this._treeBoxObject.rowCountChanged(newIndex, 1);
+        this._treeBoxObject.rowCountChanged(parentIndex, this.rowCount - oldRowCount);
         this.selection.select(newIndex);
         this._treeBoxObject.ensureRowIsVisible(newIndex);
         this._treeBoxObject.treeBody.focus();
@@ -359,7 +325,11 @@ AATreeView.prototype = {
 
     getRowProperties: function(index){},
 
-    getCellProperties: function(row, col){},
+    getCellProperties: function(row, col){
+        if(this.isContainer(row)){
+            return 'title';
+        }
+    },
 
     getColumnProperties: function(col){},
 

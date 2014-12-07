@@ -1,5 +1,7 @@
 <?xml version="1.0"?>
 
+<!-- See license.txt for terms of usage -->
+
 <bindings id="skinMenuBindings"
         xmlns="http://www.mozilla.org/xbl"
         xmlns:xbl="http://www.mozilla.org/xbl"
@@ -48,7 +50,7 @@
 
         <method name="_initMenu">
             <body><![CDATA[
-                this._destoryMenu();
+                this._destroyMenu();
 
                 var skinMenu = this.parentNode;
 
@@ -64,24 +66,28 @@
                 var skinDir = this.ChaikaCore.getDataDir();
                 skinDir.appendRelativePath("skin");
 
-                if(skinDir.exists()){
-                    let entries = skinDir.directoryEntries
-                            .QueryInterface(Components.interfaces.nsIDirectoryEnumerator);
-                    let entry;
-
-                    while(entry = entries.nextFile){
-                        if(entry.isDirectory()){
-                            let item = skinMenu.appendItem(entry.leafName, entry.leafName);
-                            item.setAttribute('type', 'radio');
-                        }
-                    }
-
-                    entries.close();
+                if(!skinDir.exists()){
+                    skinDir.create(Ci.nsIFile.DIRECTORY_TYPE, 0755);
                 }
 
+                let entries = skinDir.directoryEntries.QueryInterface(Components.interfaces.nsIDirectoryEnumerator);
+                let entry;
+
+                while(entry = entries.nextFile){
+                    if(entry.isDirectory()){
+                        let item = skinMenu.appendItem(entry.leafName, entry.leafName);
+                        item.setAttribute('class', 'chaika-thirdparty-skin');
+                        item.setAttribute('type', 'radio');
+                    }
+                }
+
+                entries.close();
+
                 //セパレータ
-                var sep2 = document.createElement('menuseparator');
-                skinMenu.menupopup.appendChild(sep2);
+                if(skinMenu.getElementsByClassName('chaika-thirdparty-skin').length > 0){
+                    let sep2 = document.createElement('menuseparator');
+                    skinMenu.menupopup.appendChild(sep2);
+                }
 
                 //スキンフォルダを開く
                 var folderOpenItem = skinMenu.appendItem('スキンフォルダを開く...', '');
@@ -99,7 +105,7 @@
         </method>
 
 
-        <method name="_destoryMenu">
+        <method name="_destroyMenu">
             <body><![CDATA[
                 while(this.hasChildNodes()){
                     this.removeChild(this.firstChild);
@@ -113,7 +119,7 @@
                 var skinDir = this.ChaikaCore.getDataDir();
                 skinDir.appendRelativePath("skin");
 
-                this.ChaikaCore.io.revealDir(skinDir);
+                this.ChaikaCore.io.reveal(skinDir);
             ]]></body>
         </method>
 
@@ -133,3 +139,4 @@
     </implementation>
 
 </binding>
+</bindings>

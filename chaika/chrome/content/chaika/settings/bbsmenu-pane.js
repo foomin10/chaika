@@ -20,6 +20,7 @@
  *
  * Contributor(s):
  *    flyson <flyson at users.sourceforge.jp>
+ *    nodaguti <nodaguti at gmail.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -68,7 +69,7 @@ var gBbsmenuPane = {
     openSearchPluginDir: function(){
         var pluginDir = ChaikaCore.getDataDir();
         pluginDir.appendRelativePath("search");
-        ChaikaCore.io.revealDir(pluginDir);
+        ChaikaCore.io.reveal(pluginDir);
     },
 
     resetBbsmenuURL: function(){
