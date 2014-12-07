@@ -95,12 +95,6 @@
 
             this._labelbox = this._root.querySelector('.label');
             this._ruleEditor = this._root.querySelector('.rule-editor');
-
-            this.setAutoNaming(true);
-
-            setTimeout(() => {
-                this._setExpirePreset('today');
-            }, 0);
         ]]></constructor>
 
 
@@ -121,8 +115,10 @@
                                 break;
 
                             default:
-                                if(target.matches && target.matches('.expire-preset menuitem') ||
-                                   target.mozMatchesSelector && target.mozMatchesSelector('.expire-preset menuitem')){
+                                if(target.matches &&  // For Firefox 34+
+                                   target.matches('.expire-preset menuitem') ||
+                                   target.mozMatchesSelector &&  // For Firefox 33-
+                                   target.mozMatchesSelector('.expire-preset menuitem')){
                                         this._setExpirePreset(target.value);
                                 }
                         }
@@ -141,6 +137,11 @@
             ]]></body>
         </method>
 
+        <!--
+        /**
+         * 自動ネーミングを切り替える
+         */
+        -->
         <method name="toggleAutoNaming">
             <body><![CDATA[
                 let checkbox = this._root.querySelector('.auto-naming');
@@ -150,6 +151,12 @@
             ]]></body>
         </method>
 
+        <!--
+        /**
+         * 自動ネーミングを設定する
+         * @param {Boolean} enable 設定する値
+         */
+        -->
         <method name="setAutoNaming">
             <parameter name="enable"/>
             <body><![CDATA[
@@ -161,12 +168,23 @@
             ]]></body>
         </method>
 
+        <!--
+        /**
+         * ラベルを入力されたデータから得られるラベルに設定する
+         */
+        -->
         <method name="setLabel">
             <body><![CDATA[
                 this._labelbox.value = this.getLabelText();
             ]]></body>
         </method>
 
+        <!--
+        /**
+         * 入力データからラベルを得る
+         * @return {String} ラベル
+         */
+        -->
         <method name="getLabelText">
             <body><![CDATA[
                 let rulesText = this._ruleEditor.getLabelText();
@@ -176,6 +194,12 @@
             ]]></body>
         </method>
 
+        <!--
+        /**
+         * 入力データに一致するNGデータオブジェクトを得る
+         * @return {NGExData}
+         */
+        -->
         <method name="getNgData">
             <body><![CDATA[
                 // eval 関数の代替
@@ -224,6 +248,12 @@
             ]]></body>
         </method>
 
+        <!--
+        /**
+         * データを入力フィールドに入力する
+         * @param {NGExData} 入力するデータ
+         */
+        -->
         <method name="populateData">
             <parameter name="ngData"/>
             <body><![CDATA[
@@ -240,7 +270,7 @@
                 if(ngData.expire){
                     this._populateExpire(new Date(ngData.expire));
                 }else{
-                    this._setExpirePreset('today');
+                    this._setExpirePreset('today', true);
                 }
 
                 this._ruleEditor.populateData({
@@ -261,10 +291,20 @@
             ]]></body>
         </method>
 
+        <!--
+        /**
+         * プリセットから有効期限を設定する
+         * @param {String} relativeExpire 有効期限を表す文字列 現在からの相対時間(ミリ秒), または 'today', 'tomorrow' など
+         * @param {Boolean} notToEnableExpire 有効期限を有効にしないようにする
+         */
+        -->
         <method name="_setExpirePreset">
             <parameter name="relativeExpire" />
+            <parameter name="notToEnableExpire" />
             <body><![CDATA[
-                this._root.querySelector('.set-expire').checked = true;
+                if(!notToEnableExpire){
+                    this._root.querySelector('.set-expire').checked = true;
+                }
 
                 if(Number.isInteger(relativeExpire - 0)){
                     let expire = Date.now() + (relativeExpire - 0);
@@ -298,6 +338,12 @@
             ]]></body>
         </method>
 
+        <!--
+        /**
+         * 有効期限を設定する
+         * @param {Date} expire
+         */
+        -->
         <method name="_populateExpire">
             <parameter name="expire" />
             <body><![CDATA[
