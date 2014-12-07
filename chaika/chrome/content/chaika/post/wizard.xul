@@ -18,6 +18,7 @@
 <script type="application/javascript" src="chrome://chaika/content/post/wizard.js"/>
 <script type="application/javascript" src="chrome://chaika/content/post/post.js"/>
 <script type="application/javascript" src="chrome://chaika/content/post/trip.js"/>
+<script type="application/javascript" src="chrome://chaika/content/post/quote_paste.js"/>
 
 <stack id="titleHeaderContainer">
     <label id="titleHeader" crop="center" value=""/>
@@ -73,6 +74,10 @@
                 <menuitem id="insertDetailedBugReportTemplate"
                           label="不具合報告テンプレート(詳細)の挿入"
                           oncommand="FormPage.insertBugReportTemplate(true);" />
+                <menuseparator />
+                <menuitem id="insertQPaste"
+                          label="引用符付き貼り付け"
+                          oncommand="FormPage.quotationPaste();" />
                 <menuseparator />
                 <menuitem id="insertAAMenu"
                           label="AA・定型文の挿入"

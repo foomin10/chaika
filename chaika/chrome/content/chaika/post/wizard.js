@@ -9,6 +9,7 @@ Components.utils.import("resource://chaika-modules/ChaikaThread.js");
 Components.utils.import("resource://chaika-modules/ChaikaBoard.js");
 Components.utils.import("resource://chaika-modules/ChaikaDownloader.js");
 Components.utils.import("resource://chaika-modules/ChaikaLogin.js");
+Components.utils.import("resource://chaika-modules/ChaikaClipboard.js");
 
 const Ci = Components.interfaces;
 const Cc = Components.classes;
@@ -678,6 +679,17 @@ var FormPage = {
 
             this._messeageForm.value += template;
         });
+    },
+
+
+    quotationPaste: function(){
+        let quote = ChaikaClipboard.getString();
+        quote = '> ' + quote.replace('\n', '\n> ', 'g');
+
+        let messeageForm = this._messeageForm;
+        let leftValue = messeageForm.value.slice(0, messeageForm.selectionStart);
+        let rightValue = messeageForm.value.slice(messeageForm.selectionEnd);
+        messeageForm.value = leftValue + quote + rightValue;
     },
 
 
