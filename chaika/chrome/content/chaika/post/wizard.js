@@ -909,7 +909,7 @@ var PreviewPage = {
         previewDoc.getElementById("mail").innerHTML = previewData["mail"];
         previewDoc.getElementById("message").innerHTML = previewData["message"];
 
-        setTimeout(function(){ gWizard.canAdvance = true; }, 250);
+        setTimeout(function(){ gWizard.canAdvance = true; }, 0);
     }
 
 };
