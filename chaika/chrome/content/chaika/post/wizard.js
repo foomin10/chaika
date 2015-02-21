@@ -62,6 +62,7 @@ function startup(){
 
         switch(gBoard.type){
             case ChaikaBoard.BOARD_TYPE_2CH:
+            case ChaikaBoard.BOARD_TYPE_NEXT:
             case ChaikaBoard.BOARD_TYPE_JBBS:
             case ChaikaBoard.BOARD_TYPE_MACHI:
                 break;
@@ -87,6 +88,7 @@ function startup(){
 
         switch(gBoard.type){
             case ChaikaBoard.BOARD_TYPE_2CH:
+            case ChaikaBoard.BOARD_TYPE_NEXT:
             case ChaikaBoard.BOARD_TYPE_JBBS:
                 break;
             default:
@@ -108,7 +110,8 @@ function startup(){
     os.addObserver(FormPage.p2LoginObserver, "ChaikaP2Login:Login", false);
     os.addObserver(FormPage.p2LoginObserver, "ChaikaP2Login:Logout", false);
 
-    if(gBoard.type == ChaikaBoard.BOARD_TYPE_2CH && !gBoard.settingFile.exists()){
+    if((gBoard.type == ChaikaBoard.BOARD_TYPE_2CH || gBoard.type == ChaikaBoard.BOARD_TYPE_NEXT)
+       && !gBoard.settingFile.exists()){
         gWizard.goTo("boardSettingPage");
     }else{
         gWizard.goTo("formPage");
@@ -388,6 +391,7 @@ var FormPage = {
             }else{
                 switch(gBoard.type){
                     case ChaikaBoard.BOARD_TYPE_2CH:
+                    case ChaikaBoard.BOARD_TYPE_NEXT:
                         gPost = new Post(gThread, gBoard);
                         break;
                     case ChaikaBoard.BOARD_TYPE_JBBS:
@@ -404,6 +408,7 @@ var FormPage = {
             }else{
                 switch(gBoard.type){
                     case ChaikaBoard.BOARD_TYPE_2CH:
+                    case ChaikaBoard.BOARD_TYPE_NEXT:
                         gPost = new Post2chNewThread(gBoard);
                         break;
                     case ChaikaBoard.BOARD_TYPE_JBBS:
