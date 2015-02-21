@@ -161,6 +161,11 @@ ChaikaThread.prototype = {
         this.plainURL = ioService.newURI(this.url.resolve("./"), null, null)
                 .QueryInterface(Components.interfaces.nsIURL);
 
+        if(this.type == ChaikaBoard.BOARD_TYPE_NEXT){
+            this.plainURL = ioService.newURI(this.plainURL.spec.replace("/test/read.cgi/", "/"), null, null)
+                    .QueryInterface(Components.interfaces.nsIURL);
+        }
+
         this.datID = this.plainURL.directory.match(/\/(\d{9,10})/) ? RegExp.$1 : null;
         if(!this.datID){
             throw makeException(Cr.NS_ERROR_INVALID_ARG, "No Supported Boad");
@@ -377,6 +382,9 @@ ChaikaThread.getBoardURL = function ChaikaThread_getBoardURL(aThreadURL){
         case ChaikaBoard.BOARD_TYPE_2CH:
         case ChaikaBoard.BOARD_TYPE_BE2CH:
         case ChaikaBoard.BOARD_TYPE_PAGE:
+            boardURLSpec = boardURLSpec.replace("/test/read.cgi/", "/");
+            break;
+        case ChaikaBoard.BOARD_TYPE_NEXT:
             boardURLSpec = boardURLSpec.replace("/test/read.cgi/", "/");
             break;
         case ChaikaBoard.BOARD_TYPE_JBBS:
