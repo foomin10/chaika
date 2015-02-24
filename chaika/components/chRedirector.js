@@ -47,6 +47,7 @@ chRedirector.prototype = {
         var host = aContentLocation.host;
         if(host.indexOf(".2ch.net") == -1 &&
            host.indexOf(".bbspink.com") == -1 &&
+           host.indexOf("next2ch.net") == -1 &&
            host != "jbbs.livedoor.jp" &&
            host != "jbbs.shitaraba.net"){
             return Ci.nsIContentPolicy.ACCEPT;

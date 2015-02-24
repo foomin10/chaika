@@ -77,6 +77,7 @@ ThreadServerScript.prototype  = {
 
         switch(type){
             case ChaikaBoard.BOARD_TYPE_2CH:
+            case ChaikaBoard.BOARD_TYPE_NEXT:
                 this.thread = new Thread2ch();
                 break;
             case ChaikaBoard.BOARD_TYPE_JBBS:

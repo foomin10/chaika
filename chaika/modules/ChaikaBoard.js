@@ -111,9 +111,25 @@ ChaikaBoard.prototype = {
     getTitle: function ChaikaBoard_getTitle(){
         return this.getSetting("BBS_TITLE") ||
                this._getMachiTitle() ||
+               this._getNextTitle() ||
                this._getBoardTitle() ||
                this._fetchPageTitle() ||
                this.url.spec;
+    },
+
+
+    _getNextTitle: function(){
+        if(this.type !== ChaikaBoard.BOARD_TYPE_NEXT) return null;
+
+        var orig_title = this._getBoardTitle();
+
+        try{
+            return orig_title.replace(' - Next2ch', '');
+        }catch(ex){
+            ChaikaCore.logger.error(ex);
+        }
+
+        return null;
     },
 
 
@@ -249,6 +265,7 @@ ChaikaBoard.prototype = {
                 var charset;
                 switch(this.type){
                     case ChaikaBoard.BOARD_TYPE_2CH:
+                    case ChaikaBoard.BOARD_TYPE_NEXT:
                     case ChaikaBoard.BOARD_TYPE_MACHI:
                     case ChaikaBoard.BOARD_TYPE_OLD2CH:
                         charset =  "Shift_JIS";
@@ -329,6 +346,11 @@ ChaikaBoard.prototype = {
                 baseUrlSpec = this.url.resolve("../");
                 categoryPath = this.url.spec.substring(baseUrlSpec.length);
                 threadUrlSpec = baseUrlSpec + "test/read.cgi/" + categoryPath;
+                break;
+            case ChaikaBoard.BOARD_TYPE_NEXT:
+                baseUrlSpec = this.url.resolve("../");
+                categoryPath = this.url.spec.substring(baseUrlSpec.length);
+                threadUrlSpec = baseUrlSpec + categoryPath;
                 break;
             case ChaikaBoard.BOARD_TYPE_JBBS:
                 baseUrlSpec = this.url.resolve("../../");
@@ -591,6 +613,7 @@ ChaikaBoard.prototype = {
         switch(this.type){
             case ChaikaBoard.BOARD_TYPE_2CH:
             case ChaikaBoard.BOARD_TYPE_BE2CH:
+            case ChaikaBoard.BOARD_TYPE_NEXT:
                 lineReg = /^(\d{9,10})\.dat<>(.+) ?\((\d{1,4})\)/;
                 break;
             case ChaikaBoard.BOARD_TYPE_JBBS:
@@ -604,6 +627,7 @@ ChaikaBoard.prototype = {
         switch(this.type){
             case ChaikaBoard.BOARD_TYPE_2CH:
             case ChaikaBoard.BOARD_TYPE_MACHI:
+            case ChaikaBoard.BOARD_TYPE_NEXT:
                 charset = "Shift_JIS";
                 break;
             case ChaikaBoard.BOARD_TYPE_BE2CH:
@@ -790,7 +814,7 @@ ChaikaBoard.BOARD_TYPE_BE2CH  = 2;
  * したらば JBBS
  * @constant
  */
-ChaikaBoard.BOARD_TYPE_JBBS   =  3;
+ChaikaBoard.BOARD_TYPE_JBBS   = 3;
 /**
  * まちBBS
  * @constant
@@ -801,6 +825,11 @@ ChaikaBoard.BOARD_TYPE_MACHI  = 4;
  * @constant
  */
 ChaikaBoard.BOARD_TYPE_PAGE   = 5;
+/**
+ * Next2ch
+ * @constant
+ */
+ChaikaBoard.BOARD_TYPE_NEXT   = 99;
 
 
 /**
@@ -823,6 +852,8 @@ ChaikaBoard.getBoardID = function ChaikaBoard_getBoardID(aBoardURL){
         boardID += "machi" + aBoardURL.path;
     }else if(aBoardURL.host.indexOf(".bbspink.com")!=-1){
         boardID += "bbspink" + aBoardURL.path;
+    }else if(aBoardURL.host.endsWith("next2ch.net")){
+        boardID += "next2ch" + aBoardURL.path;
     }else if(aBoardURL.host == "jbbs.livedoor.jp" || aBoardURL.host == 'jbbs.shitaraba.net'){
         boardID += "jbbs" + aBoardURL.path;
     }else{
@@ -897,6 +928,8 @@ ChaikaBoard.getBoardType = function ChaikaBoard_getBoardType(aURL){
     if(aURL.host.indexOf(".bbspink.com") != -1) return ChaikaBoard.BOARD_TYPE_2CH;
         // まちBBS
     if(aURL.host.indexOf(".machi.to") != -1) return ChaikaBoard.BOARD_TYPE_MACHI;
+        // Next2ch
+    if(aURL.host.endsWith("next2ch.net")) return ChaikaBoard.BOARD_TYPE_NEXT;
         // JBBS
     if(aURL.host == "jbbs.livedoor.jp") return ChaikaBoard.BOARD_TYPE_JBBS;
     if(aURL.host == "jbbs.shitaraba.net") return ChaikaBoard.BOARD_TYPE_JBBS;
