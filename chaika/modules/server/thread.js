@@ -887,6 +887,16 @@ Thread2ch.prototype = {
                 var blogbanURL = ioService.newURI(blogbanURLSpec, null, null).QueryInterface(Ci.nsIURL);
                 this.httpChannel = ChaikaCore.getHttpChannel(blogbanURL);
                 this._blogbanMode = true;
+            }else if(this.thread.boardURL.host.endsWith('jikkyo.org')){
+                var jikkyoOrgSpec = "http://captain.jikkyo.org/kako"
+                                  + new Date(this.thread.datID * 1000).getFullYear()
+                                  + '/dat/'
+                                  + this.thread.datID
+                                  + ".dat"
+                var ioService = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
+                var jikkyoOrg = ioService.newURI(jikkyoOrgSpec, null, null).QueryInterface(Ci.nsIURL);
+                this.httpChannel = ChaikaCore.getHttpChannel(jikkyoOrg);
+                this._jikkyoOrgMode = true;
             }else if( (this.thread.boardURL.host.endsWith('bbspink.com') ||
                        this.thread.boardURL.host.endsWith('2ch.net')) &&
                       ChaikaCore.pref.getBool('thread_get_log_from_offlaw2') ){
@@ -1030,7 +1040,7 @@ Thread2ch.prototype = {
         this._aboneChecked = true;
 
 
-        if(this._maruMode && !this._mimizunMode && !this._offlaw2Mode && !this._unkarMode && !this._bg20Mode && !this._vip2chMode && !this._viprpgMode && !this._yykakikoMode && !this._blogkakikoMode && !this._blogbanMode && !this._janeMode && !this._squadMode && this._data.length === 0){
+        if(this._maruMode && !this._mimizunMode && !this._offlaw2Mode && !this._unkarMode && !this._bg20Mode && !this._vip2chMode && !this._viprpgMode && !this._yykakikoMode && !this._blogkakikoMode && !this._blogbanMode && !this._janeMode && !this._squadMode && this._jikkyoOrgMode && this._data.length === 0){
             if(availableData.match(/\n/)){
                 availableData = RegExp.rightContext;
             }else{
@@ -1123,6 +1133,7 @@ Thread2ch.prototype = {
                 this._onThreadCollapsed();
                 return;
             case 404: // Not Found
+                //this.thread.boardURL.host.endsWith('.jikkyo.org') // jikkyo.org は 302 を返すので必要なし
                 if(this.thread.boardURL.host === "ex14.vip2ch.com" || /(?:b|yy)\d+\.(?:\d+\.kg|kakiko\.com)/.test(this.thread.boardURL.host) || this.thread.boardURL.host === "blogban.net" || this.thread.boardURL.host === "jane.s28.xrea.com" || this.thread.boardURL.host === "mattari.plusvip.jp" || this.thread.boardURL.host === "report-section.hiyoko.biz"){
                     if(this._kakoDatDownload || this.thread.lineCount > 1000){
                         this.write(this.converter.getFooter("dat_down"));
@@ -1242,6 +1253,8 @@ Thread2ch.prototype = {
             alertStrID = "got_a_log_from_jane";
         }else if(this._squadMode){
             alertStrID = "got_a_log_from_squad";
+        }else if(this._jikkyoOrgMode){
+            alertStrID = "got_a_log_from_jikkyo_org";
         }else{
             return;
         }
