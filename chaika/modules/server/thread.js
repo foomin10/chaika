@@ -825,53 +825,49 @@ Thread2ch.prototype = {
 
                 this.httpChannel = ChaikaCore.getHttpChannel(datKakoURL);
                 this._maruMode = true;
-            }else if(this.thread.boardURL.host == "ex14.vip2ch.com" || this.thread.boardURL.host == "mattari.plusvip.jp" || this.thread.boardURL.host == "report-section.hiyoko.biz"){
-                var vip2chURLSpec = ""
-                    + "http://"
-                    + this.thread.boardURL.host
-                    + this.thread.boardURL.filePath
-                    + "kako/"
-                    + this.thread.datID.substring(0, 4)
-                    + "/"
-                    + this.thread.datID.substring(0, 5)
-                    + "/"
-                    + this.thread.datID
-                    + ".dat"
-                ;
+            }else if(this.thread.boardURL.host === 'ex14.vip2ch.com' ||
+                     this.thread.boardURL.host === 'mattari.plusvip.jp' ||
+                     this.thread.boardURL.host === 'report-section.hiyoko.biz'){
+                var vip2chURLSpec = "http://"
+                                  + this.thread.boardURL.host
+                                  + this.thread.boardURL.filePath
+                                  + "kako/"
+                                  + this.thread.datID.slice(0, 4)
+                                  + "/"
+                                  + this.thread.datID.slice(0, 5)
+                                  + "/"
+                                  + this.thread.datID
+                                  + ".dat"
                 var ioService = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
                 
                 var vip2chURL = ioService.newURI(vip2chURLSpec, null, null).QueryInterface(Ci.nsIURL);
                 this.httpChannel = ChaikaCore.getHttpChannel(vip2chURL);
-                if(this.thread.boardURL.host.match(/vip2ch/)){
+                if(this.thread.boardURL.host.contains('vip2ch')){
                     this._vip2chMode = true;
-                }else if(this.thread.boardURL.host.match(/hiyoko\.biz/)){
+                }else if(this.thread.boardURL.host.contains('hiyoko.biz')){
                     this._squadMode = true;
                 }else{
                     this._janeMode = true;
                 }
-            }else if(this.thread.boardURL.host == "jane.s28.xrea.com"){
-                janeURLSpec = ""
-                    + "http://www13.atpages.jp/~janebbs/kakolog/dat/"
-                    + this.thread.datID
-                    + ".dat"
-                ;
+            }else if(this.thread.boardURL.host === 'jane.s28.xrea.com'){
+                var janeURLSpec = "http://www13.atpages.jp/~janebbs/kakolog/dat/"
+                                + this.thread.datID
+                                + ".dat"
                 var ioService = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
                 var janeURL = ioService.newURI(janeURLSpec, null, null).QueryInterface(Ci.nsIURL);
                 this.httpChannel = ChaikaCore.getHttpChannel(janeURL);
                 this._janeMode = true;
-            }else if(this.thread.boardURL.host.match(/(?:b|yy)\d+\.(?:\d+\.kg|kakiko\.com)/)){
-                var kakikoURLSpec  = ""
-                    + "http://"
-                    + this.thread.boardURL.host
-                    + this.thread.boardURL.filePath
-                    + "kako/"
-                    + this.thread.datID.substring(0, 4)
-                    + "/"
-                    + this.thread.datID.substring(0, 5)
-                    + "/"
-                    + this.thread.datID
-                    + ".dat"
-                ;
+            }else if(/(?:b|yy)\d+\.(?:\d+\.kg|kakiko\.com)/.test(this.thread.boardURL.host)){
+                var kakikoURLSpec = "http://"
+                                  + this.thread.boardURL.host
+                                  + this.thread.boardURL.filePath
+                                  + "kako/"
+                                  + this.thread.datID.slice(0, 4)
+                                  + "/"
+                                  + this.thread.datID.slice(0, 5)
+                                  + "/"
+                                  + this.thread.datID
+                                  + ".dat"
                 var ioService = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
                 var kakikoURL = ioService.newURI(kakikoURLSpec, null, null).QueryInterface(Ci.nsIURL);
                 this.httpChannel = ChaikaCore.getHttpChannel(kakikoURL);
@@ -880,20 +876,20 @@ Thread2ch.prototype = {
                 }else{
                     this._blogkakikoMode = true;
                 }
-            }else if(this.thread.boardURL.host.match("blogban.net")){
-                var blogbanURLSpec  = ""
-                    + "http://"
-                    + this.thread.boardURL.host
-                    + this.thread.boardURL.filePath.slice(0, -1)
-                    + "_kako/dat/"
-                    + this.thread.datID
-                    + ".dat"
-                ;
+            }else if(this.thread.boardURL.host.endsWith('blogban.net')){
+                var blogbanURLSpec = "http://"
+                                   + this.thread.boardURL.host
+                                   + this.thread.boardURL.filePath.slice(0, -1)
+                                   + "_kako/dat/"
+                                   + this.thread.datID
+                                   + ".dat"
                 var ioService = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
                 var blogbanURL = ioService.newURI(blogbanURLSpec, null, null).QueryInterface(Ci.nsIURL);
                 this.httpChannel = ChaikaCore.getHttpChannel(blogbanURL);
                 this._blogbanMode = true;
-            }else if(this.thread.boardURL.host.match(/2ch|bbspink/) && ChaikaCore.pref.getBool("thread_get_log_from_offlaw2")) {
+            }else if( (this.thread.boardURL.host.endsWith('bbspink.com') ||
+                       this.thread.boardURL.host.endsWith('2ch.net')) &&
+                      ChaikaCore.pref.getBool('thread_get_log_from_offlaw2') ){
                 var offlaw2URLSpec = this.thread.plainURL.spec.replace(/read\.cgi\/([^\/]+)\/(\d{9,10})\/.*/, "offlaw2.so?shiro=kuma&bbs=$1&key=$2&sid=ERROR");
 
                 var ioService = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
@@ -905,59 +901,50 @@ Thread2ch.prototype = {
                 var KAGI = encodeURIComponent(Chaika2chViewer.sessionID);
                 var hostParts = this.thread.plainURL.host.split('.');
                 var pathParts = this.thread.plainURL.path.split('/');
-                var rokkaURLSpec = ""
-                    + "http://rokka." + hostParts[1] + '.' + hostParts[2]  //2ch.com or bbspink.com
-                    + "/"
-                    + hostParts[0]  //SERVER
-                    + "/"
-                    + pathParts[3]  //BOARD
-                    + "/"
-                    + this.thread.datID
-                ;
+                var rokkaURLSpec = "http://rokka."
+                                 + hostParts[1]+'.'+hostParts[2]  //2ch.net or bbspink.com
+                                 + "/"
+                                 + hostParts[0]  //SERVER
+                                 + "/"
+                                 + pathParts[3]  //BOARD
+                                 + "/"
+                                 + this.thread.datID
                 var ioService = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
                 var datKakoURL = ioService.newURI(rokkaURLSpec + '/?sid=' + KAGI, null, null).QueryInterface(Ci.nsIURL);
                 this.httpChannel = ChaikaCore.getHttpChannel(datKakoURL);
                 this._maruMode = true;
-            }else if(this.thread.boardURL.host.match(/2ch/) && ChaikaCore.pref.getBool("thread_get_log_from_bg20")){
-                var bg20URLSpec = ""
-                    + "http://bg20.2ch.net/test/r.so/"
-                    + this.thread.boardURL.host
-                    + this.thread.boardURL.filePath
-                    + this.thread.datID
-                    + "/"
-                ;
+            }else if(this.thread.boardURL.host.endsWith('2ch.net') && ChaikaCore.pref.getBool('thread_get_log_from_bg20')){
+                var bg20URLSpec = "http://bg20.2ch.net/test/r.so/"
+                                + this.thread.boardURL.host
+                                + this.thread.boardURL.filePath
+                                + this.thread.datID
+                                + "/"
                 var ioService = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
                 var bg20URL = ioService.newURI(bg20URLSpec, null, null).QueryInterface(Ci.nsIURL);
                 this.httpChannel = ChaikaCore.getHttpChannel(bg20URL);
                 this._bg20Mode = true;
             }else if(ChaikaCore.pref.getBool("thread_get_log_from_unkar")){
-                var unkarURLSpec = ""
-                    + "http://unkar.org/convert.php"
-                    + this.thread.boardURL.filePath
-                    + this.thread.datID
-                    + ".dat"
-                ;
+                var unkarURLSpec = "http://unkar.org/convert.php"
+                                 + this.thread.boardURL.filePath
+                                 + this.thread.datID
+                                 + ".dat"
                 var ioService = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
                 var unkarURL = ioService.newURI(unkarURLSpec, null, null).QueryInterface(Ci.nsIURL);
                 this.httpChannel = ChaikaCore.getHttpChannel(unkarURL);
                 this._unkarMode = true;
             }else if(ChaikaCore.pref.getBool("thread_get_log_from_viprpg")){
-                var viprpgURLSpec = ""
-                    + "http://www.viprpg.org/archive/dat/"
-                    + this.thread.datID
-                    + ".dat"
-                ;
+                var viprpgURLSpec = "http://www.viprpg.org/archive/dat/"
+                                  + this.thread.datID
+                                  + ".dat"
                 var ioService = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
                 var viprpgURL = ioService.newURI(viprpgURLSpec, null, null).QueryInterface(Ci.nsIURL);
                 this.httpChannel = ChaikaCore.getHttpChannel(viprpgURL);
                 this._viprpgMode = true;
             }else if(ChaikaCore.pref.getBool("thread_get_log_from_mimizun")){
-                var mimizunURLSpec = ""
-                    + "http://mimizun.com/log/2ch"
-                    + this.thread.boardURL.filePath
-                    + this.thread.datID
-                    + ".dat"
-                ;
+                var mimizunURLSpec = "http://mimizun.com/log/2ch"
+                                   + this.thread.boardURL.filePath
+                                   + this.thread.datID
+                                   + ".dat"
 
                 let ioService = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
                 let mimizunURL = ioService.newURI(mimizunURLSpec, null, null).QueryInterface(Ci.nsIURL);
@@ -1136,7 +1123,7 @@ Thread2ch.prototype = {
                 this._onThreadCollapsed();
                 return;
             case 404: // Not Found
-                if(this.thread.boardURL.host == "ex14.vip2ch.com" || this.thread.boardURL.host.match(/(?:b|yy)\d+\.(?:\d+\.kg|kakiko\.com)/) || this.thread.boardURL.host == "blogban.net" || this.thread.boardURL.host == "jane.s28.xrea.com" || this.thread.boardURL.host == "mattari.plusvip.jp" || this.thread.boardURL.host == "report-section.hiyoko.biz"){
+                if(this.thread.boardURL.host === "ex14.vip2ch.com" || /(?:b|yy)\d+\.(?:\d+\.kg|kakiko\.com)/.test(this.thread.boardURL.host) || this.thread.boardURL.host === "blogban.net" || this.thread.boardURL.host === "jane.s28.xrea.com" || this.thread.boardURL.host === "mattari.plusvip.jp" || this.thread.boardURL.host === "report-section.hiyoko.biz"){
                     if(this._kakoDatDownload || this.thread.lineCount > 1000){
                         this.write(this.converter.getFooter("dat_down"));
                         this.close();
