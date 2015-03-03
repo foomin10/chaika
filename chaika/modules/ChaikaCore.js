@@ -701,6 +701,17 @@ function ChaikaBrowser(){
 
 ChaikaBrowser.prototype = {
 
+
+    getGlobalMessageManager: function(){
+        if(this._globalMM) return this._globalMM;
+
+        this._globalMM = Cc["@mozilla.org/globalmessagemanager;1"].getService(Ci.nsIFrameScriptLoader);
+        this._globalMM.loadFrameScript('chrome://chaika/content/browser/content.js', true);
+
+        return this._globalMM;
+    },
+
+
     /**
      * 指定した URL をスレッド表示で開く。
      * aReplaceViewLimit が真なら、渡された URL のオプションを Chaika の設定で上書きする。
@@ -857,11 +868,7 @@ ChaikaBrowser.prototype = {
             }
         }
 
-        // For Firefox 26-
-        // (Spread Operator for function calls is supported on Firefox 27+)
-        let _args = [aURL, "_blank", "chrome, toolbar, centerscreen, resizable, minimizable", ...args];
-
-        this.getBrowserWindow().openDialog.apply(null, _args);
+        this.getBrowserWindow().openDialog(aURL, "_blank", "chrome, toolbar, centerscreen, resizable, minimizable", ...args);
     },
 
 

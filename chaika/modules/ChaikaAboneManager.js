@@ -150,10 +150,12 @@ AboneData.prototype = {
         this._data.push(aWord);
 
         //通知する
-        let type = Cc["@mozilla.org/supports-string;1"].createInstance(Ci.nsISupportsString);
-        type.data = this._ngType;
-
-        Services.obs.notifyObservers(type, "chaika-abone-data-add", aWord);
+        ChaikaCore.browser.getGlobalMessageManager().broadcastAsyncMessage(
+            'chaika-abone-add', {
+                type: this._ngType,
+                data: aWord
+            }
+        );
     },
 
     remove: function(aWord){
@@ -163,10 +165,12 @@ AboneData.prototype = {
             this._data.splice(index, 1);
 
             //通知する
-            let type = Cc["@mozilla.org/supports-string;1"].createInstance(Ci.nsISupportsString);
-            type.data = this._ngType;
-
-            Services.obs.notifyObservers(type, "chaika-abone-data-remove", aWord);
+            ChaikaCore.browser.getGlobalMessageManager().broadcastAsyncMessage(
+                'chaika-abone-remove', {
+                    type: this._ngType,
+                    data: aWord
+                }
+            );
         }
     },
 
@@ -397,10 +401,12 @@ NGExAboneData.prototype = Object.create(AboneData.prototype, {
             this._dataObj.push(aNGData);
 
             //通知する
-            let type = Cc["@mozilla.org/supports-string;1"].createInstance(Ci.nsISupportsString);
-            type.data = this._ngType;
-
-            Services.obs.notifyObservers(type, "chaika-abone-data-add", jsonData);
+            ChaikaCore.browser.getGlobalMessageManager().broadcastAsyncMessage(
+                'chaika-abone-add', {
+                    type: this._ngType,
+                    data: jsonData
+                }
+            );
         }
     },
 
@@ -418,10 +424,12 @@ NGExAboneData.prototype = Object.create(AboneData.prototype, {
                 this._dataObj.splice(index, 1);
 
                 //通知する
-                let type = Cc["@mozilla.org/supports-string;1"].createInstance(Ci.nsISupportsString);
-                type.data = this._ngType;
-
-                Services.obs.notifyObservers(type, "chaika-abone-data-remove", aNGData);
+                ChaikaCore.browser.getGlobalMessageManager().broadcastAsyncMessage(
+                    'chaika-abone-remove', {
+                        type: this._ngType,
+                        data: aNGData
+                    }
+                );
             }
         }
     },
@@ -455,48 +463,22 @@ NGExAboneData.prototype = Object.create(AboneData.prototype, {
             this._dataObj[index] = newData;
 
 
-            let type = Cc["@mozilla.org/supports-string;1"].createInstance(Ci.nsISupportsString);
-            type.data = this._ngType;
+            ChaikaCore.browser.getGlobalMessageManager().broadcastAsyncMessage(
+                'chaika-abone-remove', {
+                    type: this._ngType,
+                    data: oldData
+                }
+            );
 
-
-            Services.obs.notifyObservers(type, "chaika-abone-data-remove", oldData);
-            Services.obs.notifyObservers(type, "chaika-abone-data-add", jsonNewData);
+            ChaikaCore.browser.getGlobalMessageManager().broadcastAsyncMessage(
+                'chaika-abone-add', {
+                    type: this._ngType,
+                    data: jsonNewData
+                }
+            );
         }
     },
 
 });
 
 NGExAboneData.constructor = NGExAboneData;
-
-
-//Polyfill for Firefox 24
-//Copied from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/find
-if (!Array.prototype.find) {
-    Object.defineProperty(Array.prototype, 'find', {
-        enumerable: false,
-        configurable: true,
-        writable: true,
-        value: function(predicate) {
-            if (this == null) {
-                throw new TypeError('Array.prototype.find called on null or undefined');
-            }
-            if (typeof predicate !== 'function') {
-                throw new TypeError('predicate must be a function');
-            }
-            var list = Object(this);
-            var length = list.length >>> 0;
-            var thisArg = arguments[1];
-            var value;
-
-            for (var i = 0; i < length; i++) {
-                if (i in list) {
-                    value = list[i];
-                    if (predicate.call(thisArg, value, i, list)) {
-                        return value;
-                    }
-                }
-            }
-            return undefined;
-        }
-    });
-}
