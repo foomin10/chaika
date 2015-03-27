@@ -3,10 +3,13 @@
 
 let Page = {
 
+    /**
+     * 初回表示時に実行される
+     */
     startup: function(){
         this._ns = new NotificationService(document.getElementById('notification'));
         this._search = new SearchBox(document.getElementById('searchBox'),
-                                       document.getElementById('searchEngineMenu'));
+                                     document.getElementById('searchEngineMenu'));
 
         this._initEvent();
         this._initTree();
@@ -15,16 +18,13 @@ let Page = {
 
 
     shutdown: function(){
-        this._treeView.uninit();
-        this._search.uninit();
         this._uninitTree();
     },
 
 
     _initEvent: function(){
-        window.addEventListener('unload', Page.shutdown.bind(this));
         document.getElementById('searchBox')
-                .addEventListener('keydown', (ev) => this._incrementalSearch(ev.target.value));
+                .addEventListener('command', (ev) => this.search(ev.target.value));
     },
 
 
@@ -46,6 +46,7 @@ let Page = {
 
 
     _uninitTree: function(){
+        this._treeView.uninit();
         this._branch.removeObserver('', this);
     },
 
@@ -64,13 +65,6 @@ let Page = {
             document.getElementById("viewFoxAge2chMenu").hidden = false;
             document.getElementById('viewFoxAge2chMenu-separator').hidden = false;
         }
-    },
-
-
-    _incrementalSearch: function(query){
-        if(this._inputTimer) clearTimeout(this._inputTimer);
-
-        this._inputTimer = setTimeout(() => this.search(query), 500);
     },
 
 
@@ -238,6 +232,3 @@ let Page = {
         }
     }
 };
-
-
-Page.startup();

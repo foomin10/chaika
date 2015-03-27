@@ -26,6 +26,21 @@ let ChaikaBBSMenu = {
         this._bbsmenuFile.appendRelativePath('bbsmenu.xml');
 
         this._parser = Cc["@mozilla.org/xmlextras/domparser;1"].createInstance(Ci.nsIDOMParser);
+
+        this._initFavBoardsFile();
+    },
+
+
+    _initFavBoardsFile: function(){
+        let favBoardsFile = ChaikaCore.getDataDir();
+        favBoardsFile.appendRelativePath('favorite_boards.xml');
+
+        if(!favBoardsFile.exists()){
+            let origFavBoardsFile = ChaikaCore.getDefaultsDir();
+            origFavBoardsFile.appendRelativePath('favorite_boards.xml');
+
+            origFavBoardsFile.copyTo(favBoardsFile.parent, null);
+        }
     },
 
 
@@ -149,7 +164,7 @@ let ChaikaBBSMenu = {
 
         htmlDoc.documentElement.appendChild(fragment);
 
-        let targetNodes = htmlDoc.querySelectorAll('font > b, font > a[href]');
+        let targetNodes = htmlDoc.querySelectorAll('b, a[href]');
         let currentCategoryNode;
 
         Array.slice(targetNodes).forEach((node) => {

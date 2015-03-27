@@ -10,6 +10,8 @@
 <page id="bookmarksPanel"
       title="BBSMENU [chaika]"
       class="bbsmenuPage"
+      onload="Page.startup();"
+      onunload="Page.shutdown();"
       xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
 <popupset>
@@ -28,7 +30,8 @@
              value=""
              emptytext=""
              flex="1"
-             type="search">
+             type="search"
+             timeout="1000">
         <box>
             <dropmarker popup="searchEngineMenu" class="plain" />
         </box>
