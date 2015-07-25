@@ -26,6 +26,7 @@ const BBS_DOMAINS = [
     'blogban.net',
     'plusvip.jp',
     'katsu.ula.cc',
+    'ex14.vip2ch.com',
 ];
 
 
