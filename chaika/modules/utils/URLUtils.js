@@ -19,7 +19,13 @@ const BBS_DOMAINS = [
     'bbspink.com',
     'machi.to',
     'jbbs.livedoor.jp',
-    'jbbs.shitaraba.net'
+    'jbbs.shitaraba.net',
+    '.2ch.sc',
+    '.jikkyo.org',
+    'next2ch.net',
+    'blogban.net',
+    'plusvip.jp',
+    'katsu.ula.cc',
 ];
 
 
@@ -29,7 +35,13 @@ const EXCLUDE_DOMAINS = [
     "epg.2ch.net",
     "headline.2ch.net",
     "newsnavi.2ch.net",
-    "headline.bbspink.com"
+    "headline.bbspink.com",
+    'developer.2ch.net',
+    'api.2ch.net',
+    'be.2ch.net',
+    'dig.2ch.net',
+    'notice.2ch.net',
+    'stats.2ch.net',
 ];
 
 
