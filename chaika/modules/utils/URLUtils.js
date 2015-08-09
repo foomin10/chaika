@@ -27,6 +27,8 @@ const BBS_DOMAINS = [
     'plusvip.jp',
     'katsu.ula.cc',
     'ex14.vip2ch.com',
+    'saradabird.com',
+    '7gon.net',
 ];
 
 
