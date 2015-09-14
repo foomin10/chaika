@@ -49,6 +49,14 @@ ChaikaService.prototype = {
         Components.utils.import("resource://chaika-modules/ChaikaBoard.js");
         Components.utils.import("resource://chaika-modules/ChaikaThread.js");
 
+        let mm = Cc['@mozilla.org/globalmessagemanager;1']
+                    .getService(Ci.nsIFrameScriptLoader);
+        let ppmm = Cc["@mozilla.org/parentprocessmessagemanager;1"]
+                    .getService(Ci.nsIProcessScriptLoader);
+
+        ppmm.loadProcessScript('chrome://chaika/content/browser/redirector.js', true);
+        ppmm.loadProcessScript('chrome://chaika/content/browser/protocol-handler.js', true);
+        mm.loadFrameScript('chrome://chaika/content/browser/thread-agent.js', true);
 
         var scope = {};
         Components.utils.import("resource://gre/modules/AddonManager.jsm", scope);
