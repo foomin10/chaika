@@ -22,7 +22,7 @@ let includes = {
         /^https?:\/\/\w+\.2ch\.net\//,
         /^https?:\/\/\w+\.bbspink.com\//,
         /^https?:\/\/\w+\.machi\.to\//,
-        /^https?:\/\/jbbs\.shitaraba\.net\//,
+        /^https?:\/\/jbbs\.shitaraba\.net\/\w+\/\d+\//,
         /^https?:\/\/\w+\.2ch\.sc\//,
         /^https?:\/\/blogban\.net\//,
         /^https?:\/\/ex14\.vip2ch\.com\//,
@@ -60,6 +60,7 @@ let excludes = {
         /\/subject\.cgi\//,
         /\/storage\.cgi\//,
         /\/notice_mail\.cgi\//,
+        /^http:\/\/jbbs\.shitaraba\.net\/bbs\/api\/setting\.cgi\/\w+\/\d+\//,
 
         /* Machi */
         /^https?:\/\/\w+\.machi\.to\/\w+\/i\//, // Mobile-version
