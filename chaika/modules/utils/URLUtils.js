@@ -97,7 +97,7 @@ let excludes = {
 /**
  * URL に対し, chaika が絡む処理をまとめる
  */
-let URLUtils = {
+this.URLUtils = {
 
     /**
      * The URL of the local server.
