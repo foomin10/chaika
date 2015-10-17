@@ -827,6 +827,25 @@ var ThreadCommand = {
 
 
     /**
+     * Twitter ウィジェットのスクリプトを読み込む
+     */
+    reloadTwitterWigets: function(){
+        let id = 'twitter-widgets-js';
+        let src = 'https://platform.twitter.com/widgets.js';
+        let script = $.id(id);
+        
+        if(script){
+            script.remove();
+            // script = script.cloneNode();
+        }else{
+            script = $.node({ script: { id, src } });
+        }
+        
+        document.body.appendChild(script);
+    },
+
+
+    /**
      * スレッドを再読込する
      */
     reload: function(){
@@ -914,6 +933,19 @@ var ResCommand = {
      */
     toggleCollapse: function(resContainer){
         resContainer.classList.toggle('collapsed');
+    },
+
+
+    /**
+     * Twitter ウィジェットを表示する
+     * @param {Element} button 対象のボタン
+     */
+    showTwitterWigets: function(button){
+        $.hide(button);
+        $.show(button.nextElementSibling);
+        // button.nextElementSibling.classList.add('twitter-tweet');
+
+        ThreadCommand.reloadTwitterWigets();
     },
 
 
