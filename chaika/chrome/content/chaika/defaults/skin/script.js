@@ -2,6 +2,16 @@
 
 'use strict';
 
+/**
+ * Polyfill for Firefox 39-
+ */
+if(!String.prototype.includes){
+    String.prototype.includes = function(){'use strict';
+        return String.prototype.indexOf.apply(this, arguments) !== -1;
+    };
+}
+
+
 /* *** Utils *** */
 var $ = {
 
@@ -1040,6 +1050,7 @@ var ResCommand = {
 
         let numberLimit = Prefs.get('pref-limit-number-of-anchors') - 0;
         let rangeLimit = Prefs.get('pref-limit-range-of-anchor') - 0;
+        let allres = $.tag('footer')[0].dataset.allres - 0;
 
         // Exceeded the limit of # anchors in a post.
         if(!ignoreLimits && numberLimit && anchors.length >= numberLimit){
@@ -1047,26 +1058,28 @@ var ResCommand = {
         }
 
         anchors = anchors.reduce((ary, node) => {
-            return ary.concat(node.textContent.match(/(?:\d{1,4}-\d{1,4}|\d{1,4}(?!-))/g));
+            return ary.concat(node.textContent.match(/(?:\d{1,4}-\d{1,4}|\d{1,4}(?!-))/));
         }, []).map((anc) => {
             let [start, end = 0] = anc.split('-');
 
             start = start - 0;
             end = end - 0;
 
-            if(!start || start <= 0){
+            if(!start){
                 return null;
             }
 
             if(!end){
-                return { start, end: start };
-            }
-
-            if(end < start){
+                [start, end] = [start, start];
+            }else if(end < start){
                 [start, end] = [end, start];
             }
 
-            if(!ignoreLimits && rangeLimit && (end - start + 1) >= rangeLimit){
+            if(allres < end){
+                end = allres;
+            }
+
+            if(allres < start || (!ignoreLimits && rangeLimit && (end - start + 1) >= rangeLimit)){
                 return null;
             }
 
@@ -1265,7 +1278,7 @@ var AboneHandler = {
         let targets = $.klass(className);
 
         targets.forEach((target) => {
-            if(!target.textContent.contains(ngWord)) return;
+            if(!target.textContent.includes(ngWord)) return;
 
             let res = target.closest('.resContainer');
             let header = $.klass('resHeader', res);
@@ -1317,11 +1330,11 @@ var Popup = {
 
 
     mouseover: function(aEvent){
-        var target = aEvent.originalTarget;
+        var target = aEvent.target;
         if(!(target instanceof HTMLElement)) return;
 
         //Beリンク
-        if(target.href && target.href.contains('be.2ch')){
+        if(target.href && target.href.includes('be.2ch')){
             target = target.parentNode;
         }
 
@@ -1359,7 +1372,7 @@ var Popup = {
 
 
     mouseout: function(aEvent){
-        var target = aEvent.originalTarget;
+        var target = aEvent.target;
 
         if(!(target instanceof HTMLElement)) return;
         if(target.className === "") return;
@@ -1495,7 +1508,7 @@ var Popup = {
         }
 
         //消そうとしているポップアップ要素
-        let targetPopup = aEvent.originalTarget;
+        let targetPopup = aEvent.target;
 
         //ポップアップ元要素からポップアップを得る
         if(!targetPopup.classList.contains('popup')){

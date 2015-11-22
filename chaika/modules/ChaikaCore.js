@@ -96,6 +96,16 @@ const SQL_BOARD_DATA = [
     ].join("\n");
 
 
+/**
+ * Polyfill for Firefox 39-
+ */
+if(!String.prototype.includes){
+    String.prototype.includes = function(){'use strict';
+        return String.prototype.indexOf.apply(this, arguments) !== -1;
+    };
+}
+
+
 /** @ignore */
 function makeException(aResult){
     var stack = Components.stack.caller.caller;
@@ -350,7 +360,7 @@ var ChaikaCore_ = {
      * @return {String}
      */
     getUserAgent: function ChaikaCore_getUserAgent(){
-        if(!this._userAgent || this._userAgent.contains('chaika/1;')){
+        if(!this._userAgent || this._userAgent.includes('chaika/1;')){
             let appInfo = Cc["@mozilla.org/xre/app-info;1"].getService(Ci.nsIXULAppInfo);
             let httpProtocolHandler = Cc["@mozilla.org/network/protocol;1?name=http"]
                                         .getService(Ci.nsIHttpProtocolHandler);
@@ -1013,7 +1023,7 @@ ChaikaIO.prototype = {
         var fileString = this.readString(file, encoding);
 
         //U+FFFD = REPLACEMENT CHARACTER
-        if(fileString.contains('\uFFFD')){
+        if(fileString.includes('\uFFFD')){
             if(suspects.length > 0){
                 fileString = this.readUnknownEncodingString(file, overrideOrigFile, suspects);
             }else{
@@ -1180,7 +1190,7 @@ ChaikaIO.prototype = {
                    .replace(/&quot;/g, '"')
                    .replace(/&#039;/g, "'")
                    .replace(/&amp;/g, '&')
-                   .replace(/&copy;/g, this.fromUTF8Octets('©'));
+                   .replace(/&copy;|&#169;/g, this.fromUTF8Octets('©'));
     },
 
 
@@ -1320,6 +1330,7 @@ ChaikaHistory.prototype = {
 
 
 const loggerLevel = Services.prefs.getIntPref("extensions.chaika.logger.level");
+const enableWarning = Services.prefs.getBoolPref("extensions.chaika.deprecation-warning.enabled");
 
 this.ChaikaCore = new Proxy(ChaikaCore_, {
 
@@ -1333,7 +1344,7 @@ this.ChaikaCore = new Proxy(ChaikaCore_, {
             // because ChaikaCore is still widely used in the chaika codebase.
             if(loggerLevel > 40 && /:\/\/chaika|chaika@chaika\.xrea\.jp/.test(caller.filename)){
                 // Do not warn
-            }else{
+            }else if(enableWarning){
                 Deprecated.warning('ChaikaCore is deprecated. It will be removed from chaika in the future.',
                                    'https://github.com/chaika/chaika/issues/234');
             }
